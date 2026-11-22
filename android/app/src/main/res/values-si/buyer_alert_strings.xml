@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="buyer_alert_choose_channel">දැනුම්දීම ලැබීමට අවම වශයෙන් එක් ක්‍රමයක් තෝරන්න.</string>
+    <string name="buyer_alert_legacy_channels">මෙම සේවාදායකයට තෝරාගත් නොමිලේ ක්‍රම සුරැකිය නොහැක. පෙරනිමිය භාවිත කිරීමට යෙදුම තුළ සහ Push පමණක් තෝරා නැවත සුරකින්න.</string>
+    <string name="buyer_alert_change_unconfirmed">මෙම වෙනස සේවාදායකය තහවුරු කළේ නැත. නැවත උත්සාහ කිරීමට පෙර යළි පූරණය කර නියමය බලන්න.</string>
+    <string name="buyer_alert_pending">සේවාදායකය තහවුරු කරන තෙක් රැඳී සිටින්න…</string>
+    <string name="buyer_alert_empty">තවම දැනුම්දීම් නියම නැත</string>
+    <string name="buyer_alert_empty_body">නව ගැළපීම් ගැන දැනගැනීමට ඉහළින් නියමයක් සාදන්න.</string>
+    <string name="buyer_alert_rules">දැනුම්දීම් නියම (%1$d)</string>
+    <string name="buyer_alert_push_blocked">මෙම උපාංගයේ Push අක්‍රියයි. ඒ වෙනුවට යෙදුම තුළ තෝරන්න, නැතිනම් සැකසීම් තුළ දැනුම්දීම් සක්‍රිය කරන්න.</string>
+    <string name="buyer_inbox_title">එන ලිපි</string>
+    <string name="buyer_inbox_mark_all">සියල්ල කියවූ ලෙස සලකුණු කරන්න</string>
+    <string name="buyer_inbox_signed_out">ඔබේ දැනුම්දීම් බැලීමට පිවිසෙන්න.</string>
+    <string name="buyer_inbox_empty">තවම දැනුම්දීම් නැත</string>
+    <string name="buyer_inbox_empty_body">නව ගැළපීම් සහ මිල වෙනස්කම් මෙහි දිස් වේ.</string>
+    <string name="buyer_inbox_listing">දැන්වීම</string>
+    <string name="buyer_inbox_alert">දැනුම්දීම</string>
+    <string name="buyer_inbox_read">කියවූ</string>
+    <string name="buyer_inbox_unread">නොකියවූ</string>
+</resources>

@@ -7,14 +7,15 @@ vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 import { trackEvent } from "@/lib/analytics";
 import MobileApp from "@/pages/MobileApp";
-import release from "../../public/app/latest-release.json";
+import manifest from "@/lib/approvedAndroidStable.json";
 
-const APK = release.apk_url;
+const release = manifest.approved ?? manifest.fallback;
+const APK = `https://pub-f15911ef9a914db9a44e1fd6b47dfe4e.r2.dev/app/motormila-${release.version}.apk`;
 
 function renderPage() {
   return render(
     <AppPreferencesProvider>
-      <MemoryRouter initialEntries={["/mobile-app"]}>
+      <MemoryRouter initialEntries={["/mobile-app?version=1.9.1&apk_url=https://example.invalid/file.apk"]}>
         <MobileApp />
       </MemoryRouter>
     </AppPreferencesProvider>,
@@ -22,15 +23,28 @@ function renderPage() {
 }
 
 describe("MobileApp page", () => {
-  it("renders one h1, every download link points at the current APK, and clicks are tracked", () => {
+  it("shows the actual decimal download size and advises declining a different version", () => {
+    renderPage();
+    const size = `${(release.bytes / 1e6).toFixed(1)} MB`;
+    expect(screen.getByText(`${size} (${release.bytes.toLocaleString("en-LK")} bytes)`)).toBeInTheDocument();
+    expect(screen.getByText(`v${release.version} · ${size}`)).toBeInTheDocument();
+    expect(screen.getAllByText(/choose Later/i).length).toBeGreaterThan(0);
+  });
+
+  it("offers only the approved APK across all placements, regardless of query parameters", () => {
     renderPage();
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-    const downloads = screen.getAllByRole("link").filter((a) => a.getAttribute("href")?.endsWith(".apk"));
-    expect(downloads.length).toBeGreaterThanOrEqual(3);
-    for (const link of downloads) expect(link).toHaveAttribute("href", APK);
-    downloads[0].addEventListener("click", (event) => event.preventDefault());
-    fireEvent.click(downloads[0]);
-    expect(trackEvent).toHaveBeenCalledWith("app_download_click", { placement: "hero", version: release.version });
+    const downloads = screen.getAllByRole("link", { name: /Download APK/i });
+    expect(downloads).toHaveLength(3);
+    downloads.forEach((link, i) => {
+      expect(link).toHaveAttribute("href", APK);
+      link.addEventListener("click", (event) => event.preventDefault());
+      fireEvent.click(link);
+      expect(trackEvent).toHaveBeenCalledWith("app_download_click", { placement: ["hero", "trust", "cta"][i], version: release.version });
+    });
+    for (const link of screen.getAllByRole("link", { name: /browse on the web/i })) {
+      expect(link).toHaveAttribute("href", "/");
+    }
   });
 
   it("links to the install steps and shows the checksum, signing cert and QR code", () => {

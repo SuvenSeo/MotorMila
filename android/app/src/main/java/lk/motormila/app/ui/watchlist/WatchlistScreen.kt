@@ -50,45 +50,36 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import lk.motormila.app.R
-import lk.motormila.app.core.format.LkrFormat
 import lk.motormila.app.core.ui.ErrorRetry
 import lk.motormila.app.core.ui.SkeletonList
+import lk.motormila.app.data.repository.SavedCheck
 import lk.motormila.app.domain.model.WatchItem
 import lk.motormila.app.ui.MotormilaTabs
 import lk.motormila.app.ui.common.mmScreenSafe
 import lk.motormila.app.ui.components.EmptyState
 import lk.motormila.app.ui.components.MmCard
-import lk.motormila.app.ui.components.MmDealBadge
 import lk.motormila.app.ui.components.MmImage
 import lk.motormila.app.ui.components.MmPriceFormat
 import lk.motormila.app.ui.components.MotormilaIconAction
 import lk.motormila.app.ui.components.listingCardKey
-import lk.motormila.app.ui.navigation.listingHeroKey
 import lk.motormila.app.ui.components.motormilaSharedBoundsTransform
 import lk.motormila.app.ui.navigation.LocalNavAnimatedVisibilityScope
 import lk.motormila.app.ui.navigation.LocalSharedTransitionScope
 import lk.motormila.app.ui.navigation.LocalTabReselect
+import lk.motormila.app.ui.navigation.listingHeroKey
 import lk.motormila.app.ui.theme.MmColors
-import lk.motormila.app.ui.theme.MmDealTone
 import lk.motormila.app.ui.theme.MmMotion
 import lk.motormila.app.ui.theme.MmShapes
 import lk.motormila.app.ui.theme.MmSpacing
 import lk.motormila.app.ui.theme.MmType
-import kotlin.math.roundToInt
 
-/**
- * Watchlist, v1.9.0: photo-leading rows on the shared MmCard/MmType language
- * with the deal verdict badge, "typical" wording (never "FMV"), bookmark
- * empty-state copy, a counted Clear-all confirmation, and Undo snackbars for
- * both swipe-remove and Clear-all (entities retained until expiry).
- */
+/** Device-local saved vehicles and observed asks; a change from the saved ask is not a deal rating. */
 @Composable
 fun WatchlistScreen(
     onOpenDetail: (id: Int) -> Unit,
@@ -97,6 +88,7 @@ fun WatchlistScreen(
     viewModel: WatchlistViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val checks by viewModel.checks.collectAsStateWithLifecycle(initialValue = emptyMap())
     val snacks = remember { SnackbarHostState() }
     var showClearDialog by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
@@ -163,9 +155,9 @@ fun WatchlistScreen(
 
     lk.motormila.app.ui.common.MmScreen(
         title = if (state.items.isEmpty()) {
-            stringResource(R.string.v19_watch_title)
+            stringResource(R.string.buyer_saved_vehicles)
         } else {
-            stringResource(R.string.v19_watch_title_count, state.items.size)
+            stringResource(R.string.buyer_saved_vehicles_count, state.items.size)
         },
         showBack = false,
         snackbarHostState = snacks,
@@ -187,7 +179,7 @@ fun WatchlistScreen(
     ) {
         lk.motormila.app.ui.components.MmPullToRefresh(
             isRefreshing = state.isRefreshing,
-            onRefresh = { viewModel.onEvent(WatchlistUiEvent.Refresh) },
+            onRefresh = { viewModel.refreshPrices() },
             indicatorTop = lk.motormila.app.ui.common.LocalMmScreenInsets.current.top,
             modifier = Modifier.fillMaxSize(),
         ) {
@@ -228,7 +220,8 @@ fun WatchlistScreen(
                         ) {
                             WatchRow(
                                 item = item,
-                                flash = item.id in state.droppedIds,
+                                check = checks[item.id],
+                                onBrowse = onBrowse,
                                 onOpen = { onOpenDetail(item.id) },
                                 onAlert = { onCreateAlert(item.id) },
                                 onRemove = { viewModel.onEvent(WatchlistUiEvent.Remove(item.id)) },
@@ -261,7 +254,8 @@ private fun BookmarkEmptyGraphic() {
 @Composable
 private fun WatchRow(
     item: WatchItem,
-    flash: Boolean,
+    check: SavedCheck?,
+    onBrowse: () -> Unit,
     onOpen: () -> Unit,
     onAlert: () -> Unit,
     onRemove: () -> Unit,
@@ -270,7 +264,15 @@ private fun WatchRow(
     val t = MmType.current
     val alertCd = stringResource(R.string.v19_watch_alert_cd, item.title)
     val removeCd = stringResource(R.string.v19_watch_remove_cd, item.title)
-    val rowCd = stringResource(R.string.v19_watch_row_cd, item.title, MmPriceFormat.compact(item.priceLkr))
+    val price = MmPriceFormat.full(item.priceLkr, stringResource(R.string.mm_price_on_request))
+    val lastAsk = if (item.priceLkr != null) stringResource(R.string.buyer_last_known_ask, price) else price
+    val baseline = item.previousPriceLkr?.takeIf { it != item.priceLkr && item.priceLkr != null }
+    val baselineLabel = baseline?.let { stringResource(R.string.buyer_saved_at_price, MmPriceFormat.full(it)) }
+    val checkedLabel = check?.let {
+        val format = android.text.format.DateFormat.getMediumDateFormat(androidx.compose.ui.platform.LocalContext.current)
+        stringResource(R.string.buyer_saved_checked, format.format(java.util.Date(it.at)))
+    } ?: stringResource(R.string.buyer_saved_unchecked)
+    val gone = check?.unavailable == true
     val swipeAlertCd = stringResource(R.string.v19_watch_swipe_alert)
     val swipeRemoveCd = stringResource(R.string.v19_watch_swipe_remove)
     val createAlertLabel = stringResource(R.string.v19_watch_create_alert)
@@ -281,7 +283,7 @@ private fun WatchRow(
             when (value) {
                 // Swipe right: create a price alert, snap back (never deletes).
                 SwipeToDismissBoxValue.StartToEnd -> {
-                    onAlert()
+                    if (!gone) onAlert()
                     false
                 }
                 // Swipe left: remove from watchlist (with Undo). Return false
@@ -297,7 +299,7 @@ private fun WatchRow(
 
     SwipeToDismissBox(
         state = dismissState,
-        enableDismissFromStartToEnd = true,
+        enableDismissFromStartToEnd = !gone,
         enableDismissFromEndToStart = true,
         backgroundContent = {
             val isAlertSide = dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd
@@ -324,10 +326,8 @@ private fun WatchRow(
             MmCard(
                 modifier = Modifier
                     .padding(horizontal = MmSpacing.gutter)
-                    .then(watchCardShared(item.id))
-                    .semantics { contentDescription = rowCd },
-                onClick = onOpen,
-                color = if (flash) c.brandContainer else null,
+                    .then(watchCardShared(item.id)),
+                onClick = if (gone) null else onOpen,
                 contentPadding = PaddingValues(0.dp),
             ) {
                 Row(
@@ -352,22 +352,22 @@ private fun WatchRow(
                             overflow = TextOverflow.Ellipsis,
                         )
                         Spacer(Modifier.height(2.dp))
-                        Text(
-                            MmPriceFormat.compact(item.priceLkr),
-                            style = t.priceS,
-                            color = c.textPrimary,
-                            maxLines = 1,
-                        )
+                        Text(lastAsk, style = t.priceS, color = c.textPrimary)
+                        baselineLabel?.let { Text(it, style = t.bodyS, color = c.textSecondary) }
                         item.district?.takeIf { it.isNotBlank() }?.let { district ->
                             Spacer(Modifier.height(2.dp))
                             Text(district, style = t.caption, color = c.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         Spacer(Modifier.height(6.dp))
-                        WatchVerdictLine(item)
+                        Text(checkedLabel, style = t.caption, color = c.textSecondary)
+                        if (gone) {
+                            Text(stringResource(R.string.mm_detail_gone_title), style = t.bodyS)
+                            TextButton(onClick = onBrowse) { Text(stringResource(R.string.v19_watch_browse)) }
+                        }
                     }
                     // 48dp targets, stacked so the text column keeps room.
                     Column {
-                        IconButton(
+                        if (!gone) IconButton(
                             onClick = onAlert,
                             modifier = Modifier.size(MmSpacing.touch).semantics { contentDescription = alertCd },
                         ) {
@@ -384,55 +384,6 @@ private fun WatchRow(
             }
         },
     )
-}
-
-/**
- * Drop chip + verdict badge vs the TYPICAL price (never "FMV"): the badge
- * uses the same below-typical rules as the home rails; when the gap is small
- * or unknown we show the quiet typical asking price instead.
- */
-@Composable
-private fun WatchVerdictLine(item: WatchItem) {
-    val c = MmColors.current
-    val t = MmType.current
-    val pct = item.underFmvFraction?.let { (it * 100).roundToInt() }
-    val dropPctText = item.dropPct()?.let { LkrFormat.deltaPct(it) }
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (item.hasPriceDrop && dropPctText != null) {
-            val dropCd = stringResource(R.string.v19_watch_drop_cd, dropPctText)
-            Text(
-                text = "▼ $dropPctText",
-                style = t.caption,
-                fontWeight = FontWeight.Bold,
-                color = c.onDealGood,
-                modifier = Modifier
-                    .clip(MmShapes.pill)
-                    .background(c.dealGoodContainer)
-                    .padding(horizontal = 8.dp, vertical = 3.dp)
-                    .semantics { contentDescription = dropCd },
-            )
-        }
-        if (pct != null && pct >= 5) {
-            val tone = when {
-                pct >= 15 -> MmDealTone.GREAT
-                else -> MmDealTone.GOOD
-            }
-            MmDealBadge(stringResource(R.string.mm_pct_below_typical, pct), tone)
-        }
-    }
-    if (item.fmvLkr != null && (pct == null || pct < 5)) {
-        Spacer(Modifier.height(4.dp))
-        Text(
-            stringResource(R.string.v19_watch_typical, MmPriceFormat.compact(item.fmvLkr)),
-            style = t.caption,
-            color = c.textTertiary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
 }
 
 // ── Shared-transition wiring: watchlist row → Detail container transform ──

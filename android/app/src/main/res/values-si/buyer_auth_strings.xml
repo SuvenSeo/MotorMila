@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="buyer_auth_welcome">නැවතත් සාදරයෙන් පිළිගනිමු</string>
+    <string name="buyer_auth_sign_in">පිවිසෙන්න</string>
+    <string name="buyer_auth_sign_up">ලියාපදිංචි වන්න</string>
+    <string name="buyer_auth_create_account">ගිණුමක් සාදන්න</string>
+    <string name="buyer_auth_session_expired">%1$s සඳහා ඔබේ සැසිය කල් ඉකුත් වී ඇත. නැවත පිවිසෙන්න.</string>
+    <string name="buyer_auth_last_account">ඔබ අවසන් වරට පිවිසුණේ %1$s ලෙසයි.</string>
+    <string name="buyer_auth_name">නම</string>
+    <string name="buyer_auth_email">ඊමේල් ලිපිනය</string>
+    <string name="buyer_auth_password">මුරපදය</string>
+    <string name="buyer_auth_hide_password">මුරපදය සඟවන්න</string>
+    <string name="buyer_auth_show_password">මුරපදය පෙන්වන්න</string>
+    <string name="buyer_auth_invite">ආරාධනා කේතය</string>
+    <string name="buyer_auth_invite_optional">අනිවාර්ය නොවේ. දින %1$dක Pro අත්හදා බැලීමක් සඳහා මෙය හිස්ව තබන්න.</string>
+    <string name="buyer_auth_invite_required">ඔබේ පරිපාලකයා හෝ වෙළෙන්දා ලබා දුන් කේතය ඇතුළත් කරන්න.</string>
+    <string name="buyer_auth_start_trial">දින %1$dක අත්හදා බැලීම අරඹන්න</string>
+    <string name="buyer_auth_retry">නැවත උත්සාහ කරන්න</string>
+    <string name="buyer_auth_retry_online">අන්තර්ජාලයට සම්බන්ධ වූ පසු නැවත උත්සාහ කරන්න</string>
+    <string name="buyer_auth_reset_web">වෙබ් අඩවියෙන් මුරපදය යළි සකසන්න</string>
+    <string name="buyer_auth_reset_unavailable">මුරපදය යළි සැකසීමේ පිටුව විවෘත කළ නොහැකි විය. මෙම ලිපිනය බ්‍රවුසරයකින් විවෘත කරන්න: %1$s</string>
+    <string name="buyer_auth_guest">අමුත්තෙකු ලෙස වාහන බලන්න</string>
+</resources>

@@ -39,7 +39,7 @@ fun AlertMatchResultDto.toDomain(): AlertMatch = AlertMatch(
     listings = listings.map { it.toDomain() },
 )
 
-private val LISTING_ID_IN_LINK = Regex("/listings/(\\d+)")
+private val LISTING_PATH = Regex("/listings?/([1-9]\\d*)/?")
 
 /**
  * Backend NotificationRead {id,user_token,title,body,link,read,created_at}.
@@ -47,7 +47,8 @@ private val LISTING_ID_IN_LINK = Regex("/listings/(\\d+)")
  * listingId is parsed from the link when present.
  */
 fun NotificationDto.toDomain(): AppNotification {
-    val listingId = link?.let { LISTING_ID_IN_LINK.find(it)?.groupValues?.getOrNull(1)?.toIntOrNull() }
+    val path = link?.let { runCatching { java.net.URI(it).rawPath }.getOrNull() }
+    val listingId = path?.let { LISTING_PATH.matchEntire(it)?.groupValues?.get(1)?.toIntOrNull() }
     return AppNotification(
         id = id,
         title = title,

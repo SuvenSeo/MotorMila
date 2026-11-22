@@ -4,6 +4,7 @@ import androidx.paging.ExperimentalPagingApi
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
+import androidx.paging.filter
 import androidx.paging.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -65,7 +66,14 @@ class ListingRepositoryImpl @Inject constructor(
                     },
                     onSourceChanged = { fromSnapshot -> _pagingFromSnapshot.value = fromSnapshot },
                 )
-            }.flow
+            }.flow.map { paging ->
+                // Offset paging + live scraping: rows inserted between page
+                // loads shift an id onto the next page too. Lazy lists key by
+                // id and crash on a repeat ("Key was already used"), so keep
+                // the first occurrence per generation.
+                val seen = java.util.concurrent.ConcurrentHashMap.newKeySet<Int>()
+                paging.filter { seen.add(it.id) }
+            }
         } else {
             @OptIn(ExperimentalPagingApi::class)
             Pager(

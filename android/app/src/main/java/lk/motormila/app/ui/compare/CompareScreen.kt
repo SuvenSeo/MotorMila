@@ -1,11 +1,9 @@
 package lk.motormila.app.ui.compare
 
 import lk.motormila.app.ui.theme.mmTappable
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,8 +29,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -53,10 +51,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import lk.motormila.app.R
 import lk.motormila.app.domain.model.Listing
 import lk.motormila.app.ui.common.MmScreen
-import lk.motormila.app.ui.common.ScreenError
-import lk.motormila.app.ui.common.ScreenSkeleton
 import lk.motormila.app.ui.components.MmChip
-import lk.motormila.app.ui.components.MmDealBadge
+
 import lk.motormila.app.ui.components.MmEmptyState
 import lk.motormila.app.ui.components.MmIconButton
 import lk.motormila.app.ui.components.MmImage
@@ -77,63 +73,46 @@ private val RowHeight = 52.dp
 fun CompareScreen(
     ids: List<Int>,
     onOpenDetail: (id: Int) -> Unit,
-    onAddListing: () -> Unit,
+    onAddListing: (existingIds: List<Int>) -> Unit,
     onBrowse: () -> Unit,
     viewModel: CompareViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val snacks = remember { SnackbarHostState() }
     LaunchedEffect(ids) { viewModel.syncIds(ids) }
-    LaunchedEffect(state.error) {
-        state.error?.let {
-            if (state.items.isNotEmpty()) {
-                snacks.showSnackbar(it)
-                viewModel.onEvent(CompareUiEvent.DismissError)
-            }
-        }
-    }
+    val canAdd = state.entries.size < CompareUiState.MAX_IDS
     MmScreen(
         title = stringResource(R.string.scr_cmp_title),
-        snackbarHostState = snacks,
         actions = {
-            if (state.items.size < CompareUiState.MAX_IDS && state.items.isNotEmpty()) {
-                MmIconButton(Icons.Filled.Add, stringResource(R.string.scr_cmp_add), onClick = onAddListing)
+            if (canAdd && state.entries.isNotEmpty()) {
+                MmIconButton(Icons.Filled.Add, stringResource(R.string.scr_cmp_add), onClick = { onAddListing(state.ids) })
             }
         },
     ) {
         PullToRefreshBox(
-            isRefreshing = state.isLoading && state.items.isNotEmpty(),
+            isRefreshing = state.entries.any { it.loading && it.listing != null },
             onRefresh = { viewModel.onEvent(CompareUiEvent.Refresh) },
             modifier = Modifier.fillMaxSize(),
         ) {
-            val reducedMotion = MmMotion.reduced
-            val phase = when {
-                state.isLoading && state.items.isEmpty() -> 0
-                state.error != null && state.items.isEmpty() -> 1
-                state.items.isEmpty() -> 2
-                else -> 3
-            }
-            AnimatedContent(phase, transitionSpec = { MmMotion.crossfade(reducedMotion) }, label = "compare") { p ->
-                when (p) {
-                    0 -> ScreenSkeleton(rows = 3)
-                    1 -> ScreenError(state.error, onRetry = { viewModel.onEvent(CompareUiEvent.Refresh) })
-                    2 -> Box(Modifier.fillMaxSize().padding(MmSpacing.xxl), contentAlignment = Alignment.Center) {
-                        MmEmptyState(
-                            icon = Icons.AutoMirrored.Filled.CompareArrows,
-                            title = stringResource(R.string.scr_cmp_empty_title),
-                            message = stringResource(R.string.scr_cmp_empty_body),
-                            primaryAction = stringResource(R.string.scr_cmp_browse) to onBrowse,
-                        )
-                    }
-                    else -> CompareMatrix(
-                        items = state.items,
-                        onlyDifferences = state.onlyDifferences,
-                        onToggleDifferences = { viewModel.onEvent(CompareUiEvent.OnlyDifferences(it)) },
-                        onOpenDetail = onOpenDetail,
-                        onRemove = { viewModel.onEvent(CompareUiEvent.Remove(it)) },
-                        onAdd = onAddListing,
+            if (state.entries.isEmpty()) {
+                Box(Modifier.fillMaxSize().padding(MmSpacing.xxl), contentAlignment = Alignment.Center) {
+                    MmEmptyState(
+                        icon = Icons.AutoMirrored.Filled.CompareArrows,
+                        title = stringResource(R.string.scr_cmp_empty_title),
+                        message = stringResource(R.string.scr_cmp_empty_body),
+                        primaryAction = stringResource(R.string.scr_cmp_browse) to onBrowse,
                     )
                 }
+            } else {
+                CompareTrayMatrix(
+                    entries = state.entries,
+                    onlyDifferences = state.onlyDifferences,
+                    onToggleDifferences = { viewModel.onEvent(CompareUiEvent.OnlyDifferences(it)) },
+                    onOpenDetail = onOpenDetail,
+                    onRemove = { viewModel.onEvent(CompareUiEvent.Remove(it)) },
+                    onRetry = { viewModel.onEvent(CompareUiEvent.Retry(it)) },
+                    onAdd = { onAddListing(state.ids) },
+                    canAdd = canAdd,
+                )
             }
         }
     }
@@ -141,20 +120,11 @@ fun CompareScreen(
 
 @Composable
 private fun rememberCompareFormat(): CompareFormat {
-    val below = stringResource(R.string.scr_cmp_below_market)
-    val above = stringResource(R.string.scr_cmp_above_market)
-    val at = stringResource(R.string.scr_cmp_at_market)
-    return remember(below, above, at) {
+    return remember {
         object : CompareFormat {
             override fun price(lkr: Double?) = lkr?.takeIf { it > 0 }?.let { MmPriceFormat.compact(it) }
             override fun km(km: Double?) = km?.takeIf { it > 0 }?.let { "%,d km".format(it.toLong()) }
-            override fun vsMarket(pct: Double?) = pct?.let {
-                when {
-                    it <= -1 -> below.format("%.0f".format(-it))
-                    it >= 1 -> above.format("%.0f".format(it))
-                    else -> at
-                }
-            }
+
         }
     }
 }
@@ -163,7 +133,7 @@ private fun rememberCompareFormat(): CompareFormat {
 private fun rowLabel(key: String): String = stringResource(
     when (key) {
         "price" -> R.string.scr_cmp_price
-        "vsMarket" -> R.string.scr_cmp_vs_market
+
         "year" -> R.string.scr_cmp_year
         "mileage" -> R.string.scr_cmp_mileage
         "fuel" -> R.string.scr_cmp_fuel
@@ -192,7 +162,22 @@ fun CompareMatrix(
     onOpenDetail: (Int) -> Unit,
     onRemove: (Int) -> Unit,
     onAdd: () -> Unit,
+    canAdd: Boolean = items.size < CompareUiState.MAX_IDS,
+) = CompareTrayMatrix(items.map { CompareEntry(it.id, it) }, onlyDifferences, onToggleDifferences,
+    onOpenDetail, onRemove, onRetry = {}, onAdd = onAdd, canAdd = canAdd)
+
+@Composable
+private fun CompareTrayMatrix(
+    entries: List<CompareEntry>,
+    onlyDifferences: Boolean,
+    onToggleDifferences: (Boolean) -> Unit,
+    onOpenDetail: (Int) -> Unit,
+    onRemove: (Int) -> Unit,
+    onRetry: (Int) -> Unit,
+    onAdd: () -> Unit,
+    canAdd: Boolean,
 ) {
+    val items = entries.mapNotNull { it.listing }
     val c = MmColors.current
     val type = MmType.current
     val format = rememberCompareFormat()
@@ -213,11 +198,11 @@ fun CompareMatrix(
             val labelW = (if (maxWidth < 380.dp) 96.dp else LabelWidth) * growth
             val avail = maxWidth - labelW - MmSpacing.lg
             val colW = when {
-                items.size <= 2 -> avail / 2
+                entries.size <= 2 -> avail / 2
                 else -> avail / 2.4f
             }.coerceIn(MinColumnWidth * fontScale, MaxColumnWidth * fontScale)
             val rowH = RowHeight * fontScale
-            val showAdd = items.size < CompareUiState.MAX_IDS
+            val showAdd = canAdd
             Column(Modifier.fillMaxSize()) {
                 Row(
                     Modifier.padding(horizontal = MmSpacing.lg, vertical = MmSpacing.sm),
@@ -225,7 +210,7 @@ fun CompareMatrix(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        stringResource(R.string.scr_cmp_count, items.size, CompareUiState.MAX_IDS),
+                        stringResource(R.string.scr_cmp_count, entries.size, CompareUiState.MAX_IDS),
                         style = type.label,
                         color = c.textSecondary,
                         maxLines = 1,
@@ -244,7 +229,10 @@ fun CompareMatrix(
                 Row(Modifier.fillMaxWidth().padding(bottom = MmSpacing.xs)) {
                     Spacer(Modifier.width(labelW))
                     Row(Modifier.horizontalScroll(hScroll).padding(end = MmSpacing.lg)) {
-                        items.forEach { item -> CarHeader(item, colW, onOpenDetail, onRemove) }
+                        entries.forEach { slot ->
+                            if (slot.listing != null) CarHeader(slot.listing, colW, onOpenDetail, onRemove)
+                            else MissingHeader(slot, colW, onRetry, onRemove)
+                        }
                         if (showAdd) AddColumn(colW, onAdd)
                     }
                 }
@@ -274,25 +262,18 @@ fun CompareMatrix(
                                     )
                                 }
                             }
-                            LabelCell(rowH, divider = false) {
-                                Text(
-                                    stringResource(R.string.scr_cmp_deal),
-                                    style = type.labelS,
-                                    color = c.textSecondary,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
+
                         }
                         // Scrolling car columns (same ScrollState as the header).
                         Row(Modifier.horizontalScroll(hScroll).padding(end = MmSpacing.lg)) {
-                            items.forEachIndexed { col, item ->
-                                CarColumn(item, col, rows, colW, rowH)
+                            entries.forEach { slot ->
+                                if (slot.listing == null) Spacer(Modifier.width(colW))
+                                else CarColumn(items.indexOf(slot.listing), rows, colW, rowH)
                             }
                             if (showAdd) Spacer(Modifier.width(colW))
                         }
                     }
-                    if (emptyRows.isNotEmpty()) {
+                    if (items.isNotEmpty() && emptyRows.isNotEmpty()) {
                         val names = emptyRows.map { rowLabel(it.key) }.joinToString(" · ")
                         Row(
                             Modifier.padding(start = MmSpacing.lg, end = MmSpacing.lg, top = MmSpacing.md),
@@ -312,7 +293,7 @@ fun CompareMatrix(
                             )
                         }
                     }
-                    Text(
+                    if (items.isNotEmpty()) Text(
                         stringResource(R.string.scr_cmp_note),
                         style = type.caption,
                         color = c.textTertiary,
@@ -342,6 +323,20 @@ private fun LabelCell(rowH: androidx.compose.ui.unit.Dp, divider: Boolean = true
                     .background(c.outline),
             )
         }
+    }
+}
+
+@Composable
+private fun MissingHeader(slot: CompareEntry, colW: androidx.compose.ui.unit.Dp, onRetry: (Int) -> Unit, onRemove: (Int) -> Unit) {
+    val name = stringResource(R.string.buyer_home_listing_id, slot.id)
+    Column(Modifier.width(colW).padding(horizontal = MmSpacing.sm)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(name, modifier = Modifier.weight(1f), style = MmType.current.label)
+            MmIconButton(Icons.Filled.Close, stringResource(R.string.scr_cmp_remove, name), onClick = { onRemove(slot.id) })
+        }
+        Text(stringResource(if (slot.loading) R.string.v19_search_loading else R.string.mm_detail_load_failed),
+            style = MmType.current.bodyS)
+        if (!slot.loading) TextButton(onClick = { onRetry(slot.id) }) { Text(stringResource(R.string.retry)) }
     }
 }
 
@@ -392,7 +387,6 @@ private fun CarHeader(
 
 @Composable
 private fun CarColumn(
-    item: Listing,
     col: Int,
     rows: List<CompareLogic.Row>,
     colW: androidx.compose.ui.unit.Dp,
@@ -431,9 +425,7 @@ private fun CarColumn(
                 )
             }
         }
-        Box(Modifier.height(rowH).padding(start = MmSpacing.sm), contentAlignment = Alignment.CenterStart) {
-            MmDealBadge(band = item.dealBand())
-        }
+
     }
 }
 

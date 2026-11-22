@@ -1,5 +1,7 @@
 package lk.motormila.app.data.remote
 
+import retrofit2.http.Tag
+import lk.motormila.app.core.network.AlertSessionGuard
 import lk.motormila.app.data.remote.dto.AlertDto
 import lk.motormila.app.data.remote.dto.AnalyticsEventRequestDto
 import lk.motormila.app.data.remote.dto.AnalyticsEventResponseDto
@@ -423,37 +425,44 @@ interface MotormilaApiService {
 
     // ----------------------------------------------------------------- alerts
     @GET("alerts")
-    suspend fun listAlerts(): List<AlertDto>
+    suspend fun listAlerts(@Query("include_paused") includePaused: Boolean = true, @Tag guard: AlertSessionGuard): List<AlertDto>
 
     @POST("alerts")
-    suspend fun createAlert(@Body body: CreateAlertRequestDto): AlertDto
+    suspend fun createAlert(@Body body: CreateAlertRequestDto, @Tag guard: AlertSessionGuard): AlertDto
 
     @DELETE("alerts/{id}")
-    suspend fun deleteAlert(@Path("id") id: Int)
+    suspend fun deleteAlert(@Path("id") id: Int, @Tag guard: AlertSessionGuard)
 
     /** In-place edit (same id). Older backends answer 405 — see AlertsRepositoryImpl.update. */
     @PUT("alerts/{id}")
-    suspend fun updateAlert(@Path("id") id: Int, @Body body: CreateAlertRequestDto): AlertDto
+    suspend fun updateAlert(@Path("id") id: Int, @Body body: CreateAlertRequestDto, @Tag guard: AlertSessionGuard): AlertDto
 
     /** Matches ALL of the caller's alerts server-side; filter client-side by id. */
     @POST("alerts/match")
-    suspend fun matchAlerts(): MatchResponseDto
+    suspend fun matchAlerts(@Tag guard: AlertSessionGuard): MatchResponseDto
+
+    @PATCH("alerts/{id}/active")
+    suspend fun setAlertActive(@Path("id") id: Int, @Body body: lk.motormila.app.data.remote.dto.AlertActiveDto, @Tag guard: AlertSessionGuard): AlertDto
 
     @PATCH("alerts/{id}/channels")
     suspend fun updateAlertChannels(
         @Path("id") id: Int,
         @Body body: AlertChannelsUpdateDto,
+        @Tag guard: AlertSessionGuard,
     ): AlertDto
 
     // ----------------------------------------------------------- notifications
     @GET("notifications")
-    suspend fun listNotifications(): List<NotificationDto>
+    suspend fun listNotifications(@Tag guard: AlertSessionGuard): List<NotificationDto>
 
     @POST("notifications/{id}/read")
-    suspend fun markNotificationRead(@Path("id") id: Int): NotificationDto
+    suspend fun markNotificationRead(@Path("id") id: Int, @Tag guard: AlertSessionGuard): NotificationDto
 
     @POST("notifications/read-all")
-    suspend fun markAllNotificationsRead(): MarkAllReadDto
+    suspend fun markAllNotificationsRead(@Tag guard: AlertSessionGuard): MarkAllReadDto
+
+    @GET("notifications/preferences")
+    suspend fun alertPreferences(@Tag guard: AlertSessionGuard): lk.motormila.app.data.remote.dto.AlertPreferencesDto
 
     /** Upsert this device's FCM token for the signed-in account. */
     @POST("notifications/devices")

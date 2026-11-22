@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
+from sqlalchemy import or_, text
 from sqlalchemy.orm import Session
 
 from app.utils.price_verdict import plausible_deal_score
@@ -11,6 +12,7 @@ from app.api.v1.endpoints.auth import (
     verify_token,
 )
 from app.models.schemas import (
+    AlertActiveUpdate,
     AlertChannelsUpdate,
     AlertMatchListing,
     AlertMatchResponse,
@@ -18,7 +20,7 @@ from app.models.schemas import (
     MarketAlertCreate,
     MarketAlertRead,
 )
-from app.utils.channel_center import SUPPORTED_CHANNELS, normalize_channels
+from app.utils.channel_center import normalize_channels
 from app.services.rate_limit import RateLimiter
 from app.utils.plan_limits import FREE_ALERTS_LIMIT, PRO_ALERTS_LIMIT, is_free_browse_plan
 from db.models import CarListing, MarketAlert, live_listing_filter
@@ -81,15 +83,12 @@ def _max_alerts_for(live: Optional[dict]) -> int:
     return PRO_ALERTS_LIMIT
 
 
-@router.post("", response_model=MarketAlertRead, status_code=201)
-def create_alert(
-    payload: MarketAlertCreate,
-    request: Request,
-    db: Session = Depends(get_db),
-    authorization: Optional[str] = Header(default=None),
-    x_alert_token: Optional[str] = Header(default=None, alias="X-Alert-Token"),
-):
-    token, live = _resolve_alert_identity(request, authorization, x_alert_token, db)
+def _require_alert_capacity(db: Session, token: str, live: Optional[dict]) -> None:
+    # Serialize creates and resumes against the same PostgreSQL owner cap,
+    # including first creation where there is no alert row to lock yet.
+    if db.get_bind(MarketAlert).dialect.name == "postgresql":
+        db.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+                   {"key": f"market_alerts:{token}"})
     max_alerts = _max_alerts_for(live)
     active_count = (
         db.query(MarketAlert)
@@ -102,38 +101,55 @@ def create_alert(
             detail=f"Maximum {max_alerts} active alerts reached for this account.",
         )
 
-    notify_phone = (payload.notify_phone or "").strip() or None
-    notify_email = (payload.notify_email or "").strip() or None
-    notify_telegram_chat_id = (payload.notify_telegram_chat_id or "").strip() or None
-    notify_channels = (payload.notify_channels or "").strip() or None
-    delivery_mode = (payload.delivery_mode or "").strip().lower() or None
-    if delivery_mode not in (None, "instant", "digest"):
-        raise HTTPException(status_code=400, detail="delivery_mode must be 'instant' or 'digest'")
-    quiet_hours_enabled = payload.quiet_hours_enabled
 
-    # WhatsApp, email, and Telegram notifications are Pro surfaces — reject
-    # free-plan and anonymous/legacy-token attempts even if the client bypasses the UI.
-    if live is None or is_free_browse_plan(live.get("plan"), role=live.get("role")):
-        if notify_phone:
-            raise HTTPException(
-                status_code=403,
-                detail="WhatsApp alert notifications require a signed-in Pro plan.",
-            )
-        if notify_email:
-            raise HTTPException(
-                status_code=403,
-                detail="Email alert notifications require a signed-in Pro plan.",
-            )
-        if notify_telegram_chat_id:
-            raise HTTPException(
-                status_code=403,
-                detail="Telegram alert notifications require a signed-in Pro plan.",
-            )
-        if notify_channels:
-            raise HTTPException(
-                status_code=403,
-                detail="Multi-channel alert notifications require a signed-in Pro plan.",
-            )
+def _owner_rules(db: Session, owner: str):
+    return db.query(MarketAlert).filter(
+        MarketAlert.user_token == owner,
+        or_(MarketAlert.active.is_(True), MarketAlert.paused_at.is_not(None)),
+    )
+
+
+def _delivery_settings(live, *, channels, phone, email, chat_id):
+    """Resolve the channel selection and email destination before any mutation.
+
+    NULL is the legacy infer-from-destinations contract. An explicit selection
+    must be nonempty; clearing it to NULL would silently enable other channels.
+    """
+    try:
+        selected = normalize_channels(channels, strict=True)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    free = live is None or is_free_browse_plan(live.get("plan"), role=live.get("role"))
+    if free and (phone or chat_id or selected - {"inapp", "email", "push"}):
+        raise HTTPException(status_code=403, detail="WhatsApp and Telegram require a signed-in Pro plan.")
+
+    if email or "email" in selected:
+        # resolve_live_session has already checked mailbox verification and revocation.
+        if not live or (free and email and email.lower() != live["email"].lower()):
+            raise HTTPException(status_code=403, detail="Free email alerts require the verified account address.")
+        email = live["email"] if free or not email else email
+    return (",".join(sorted(selected)) if selected else None), email
+
+
+@router.post("", response_model=MarketAlertRead, status_code=201)
+def create_alert(
+    payload: MarketAlertCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
+    x_alert_token: Optional[str] = Header(default=None, alias="X-Alert-Token"),
+):
+    token, live = _resolve_alert_identity(request, authorization, x_alert_token, db)
+    _require_alert_capacity(db, token, live)
+
+    notify_phone = payload.notify_phone
+    notify_telegram_chat_id = payload.notify_telegram_chat_id
+    notify_channels, notify_email = _delivery_settings(
+        live, channels=payload.notify_channels, phone=notify_phone,
+        email=payload.notify_email, chat_id=notify_telegram_chat_id,
+    )
+    delivery_mode = payload.delivery_mode
+    quiet_hours_enabled = payload.quiet_hours_enabled
 
     alert = MarketAlert(
         user_token=token,
@@ -169,16 +185,44 @@ def list_alerts(
     token: Optional[str] = Query(default=None),
     authorization: Optional[str] = Header(default=None),
     x_alert_token: Optional[str] = Header(default=None, alias="X-Alert-Token"),
+    include_paused: bool = False,
 ):
     owner, _live = _resolve_alert_identity(
         request, authorization, _optional_str(x_alert_token) or _optional_str(token), db
     )
-    return (
-        db.query(MarketAlert)
-        .filter(MarketAlert.user_token == owner, MarketAlert.active.is_(True))
-        .order_by(MarketAlert.created_at.desc())
-        .all()
-    )
+    rules = _owner_rules(db, owner)
+    if not include_paused:
+        rules = rules.filter(MarketAlert.active.is_(True))
+    return rules.order_by(MarketAlert.created_at.desc()).all()
+
+
+@router.patch("/{alert_id}", response_model=MarketAlertRead, include_in_schema=False)
+@router.patch("/{alert_id}/active", response_model=MarketAlertRead)
+def set_alert_active(
+    alert_id: int,
+    payload: AlertActiveUpdate,
+    request: Request,
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(default=None),
+    x_alert_token: Optional[str] = Header(default=None, alias="X-Alert-Token"),
+):
+    owner, live = _resolve_alert_identity(request, authorization, x_alert_token, db)
+    alert = _owner_rules(db, owner).filter(MarketAlert.id == alert_id).with_for_update().first()
+    if alert is None:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    if alert.active != payload.active:
+        if payload.active:
+            _require_alert_capacity(db, owner, live)
+            # A rule paused on a paid plan cannot resume paid routing after a downgrade.
+            alert.notify_channels, alert.notify_email = _delivery_settings(
+                live, channels=alert.notify_channels, phone=alert.notify_phone,
+                email=alert.notify_email, chat_id=alert.notify_telegram_chat_id,
+            )
+        alert.active = payload.active
+        alert.paused_at = None if payload.active else datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(alert)
+    return alert
 
 
 @router.delete("/{alert_id}", status_code=204)
@@ -193,11 +237,13 @@ def delete_alert(
     alert = (
         db.query(MarketAlert)
         .filter(MarketAlert.id == alert_id, MarketAlert.user_token == owner)
+        .with_for_update()
         .first()
     )
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
     alert.active = False
+    alert.paused_at = None
     db.commit()
 
 
@@ -218,28 +264,16 @@ def update_alert(
     delete-then-create edit, which lost the alert when the create failed.
     """
     owner, live = _resolve_alert_identity(request, authorization, x_alert_token, db)
-    alert = (
-        db.query(MarketAlert)
-        .filter(
-            MarketAlert.id == alert_id,
-            MarketAlert.user_token == owner,
-            MarketAlert.active.is_(True),
-        )
-        .first()
-    )
+    alert = _owner_rules(db, owner).filter(MarketAlert.id == alert_id).with_for_update().first()
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
 
-    notify_phone = (payload.notify_phone or "").strip() or None
-    notify_email = (payload.notify_email or "").strip() or None
-    notify_telegram_chat_id = (payload.notify_telegram_chat_id or "").strip() or None
-    notify_channels = (payload.notify_channels or "").strip() or None
-    if live is None or is_free_browse_plan(live.get("plan"), role=live.get("role")):
-        if notify_phone or notify_email or notify_telegram_chat_id or notify_channels:
-            raise HTTPException(
-                status_code=403,
-                detail="WhatsApp, email, Telegram and multi-channel alert notifications require a signed-in Pro plan.",
-            )
+    notify_phone = payload.notify_phone
+    notify_telegram_chat_id = payload.notify_telegram_chat_id
+    notify_channels, notify_email = _delivery_settings(
+        live, channels=payload.notify_channels, phone=notify_phone,
+        email=payload.notify_email, chat_id=notify_telegram_chat_id,
+    )
 
     alert.make = (payload.make or "").strip() or None
     alert.model = (payload.model or "").strip() or None
@@ -274,24 +308,15 @@ def update_alert_channels(
     x_alert_token: Optional[str] = Header(default=None, alias="X-Alert-Token"),
 ):
     """Channel center: per-alert toggles in-app/email/WhatsApp/push + digest vs instant."""
-    owner, _live = _resolve_alert_identity(request, authorization, x_alert_token, db)
-    alert = (
-        db.query(MarketAlert)
-        .filter(MarketAlert.id == alert_id, MarketAlert.user_token == owner)
-        .first()
-    )
+    owner, live = _resolve_alert_identity(request, authorization, x_alert_token, db)
+    alert = _owner_rules(db, owner).filter(MarketAlert.id == alert_id).with_for_update().first()
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
     if payload.channels is not None:
-        channels = normalize_channels(payload.channels)
-        unknown = {str(c).strip().lower() for c in payload.channels if str(c).strip()} - channels - {""}
-        if unknown:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Unknown channels: {', '.join(sorted(unknown))}. "
-                f"Supported: {', '.join(SUPPORTED_CHANNELS)}.",
-            )
-        alert.notify_channels = ",".join(sorted(channels)) if channels else None
+        alert.notify_channels, alert.notify_email = _delivery_settings(
+            live, channels=payload.channels, phone=alert.notify_phone,
+            email=alert.notify_email, chat_id=alert.notify_telegram_chat_id,
+        )
     if payload.delivery_mode is not None:
         try:
             alert.delivery_mode = payload.delivery_mode

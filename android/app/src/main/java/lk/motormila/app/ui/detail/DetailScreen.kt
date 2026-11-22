@@ -2,29 +2,19 @@
 
 package lk.motormila.app.ui.detail
 
-import lk.motormila.app.ui.theme.glassBackdrop
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
-import lk.motormila.app.ui.theme.tabular
 import android.content.Context
-import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.animateDp
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,33 +25,27 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Chat
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.LocalGasStation
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Star
@@ -69,16 +53,13 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -87,71 +68,53 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.util.lerp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.delay
+import java.text.NumberFormat
+import java.util.Locale
+import kotlin.math.roundToInt
 import lk.motormila.app.R
 import lk.motormila.app.core.format.LkrFormat
-import lk.motormila.app.domain.model.DealBand
-import lk.motormila.app.domain.model.Fmv
-import lk.motormila.app.domain.model.toDealBand
+import lk.motormila.app.core.price.PriceVerdict
 import lk.motormila.app.domain.model.Listing
 import lk.motormila.app.domain.model.PriceHistory
 import lk.motormila.app.domain.model.SellerProfile
-import lk.motormila.app.ui.components.DealBadge
-import lk.motormila.app.ui.components.DealRing
-import lk.motormila.app.ui.components.headline
 import lk.motormila.app.ui.components.EmptyState
-import lk.motormila.app.ui.components.MmDealVerdict
-import lk.motormila.app.ui.components.MmLeaseTakeover
-import lk.motormila.app.ui.components.MmPriceChart
-import lk.motormila.app.ui.components.MmPullToRefresh
-import lk.motormila.app.ui.components.MmDetailSkeleton
 import lk.motormila.app.ui.components.ErrorState
-import lk.motormila.app.ui.components.FmvGauge
 import lk.motormila.app.ui.components.ListingImage
-import lk.motormila.app.ui.components.SlidingLkr
-import lk.motormila.app.ui.components.fitWidth
-import lk.motormila.app.ui.components.rememberSlidingLkrFitStyle
-import lk.motormila.app.ui.components.rememberFitTextStyle
-import lk.motormila.app.ui.components.listingCardKey
-import lk.motormila.app.ui.components.listingPriceKey
-import lk.motormila.app.ui.components.rememberReducedMotion
-import lk.motormila.app.ui.components.LoadingSkeletonCard
-import lk.motormila.app.ui.components.LoadingSkeletonChart
-import lk.motormila.app.ui.components.LockedValue
+import lk.motormila.app.ui.components.MmDetailSkeleton
+import lk.motormila.app.ui.components.MmPriceChart
+import lk.motormila.app.ui.components.MmPriceFormat
 import lk.motormila.app.ui.components.MotormilaGhostButton
-import lk.motormila.app.ui.components.MotormilaIconAction
-import lk.motormila.app.ui.components.MotormilaPage
-import lk.motormila.app.ui.components.MotormilaPrimaryButton
 import lk.motormila.app.ui.components.MotormilaSurface
 import lk.motormila.app.ui.components.OfflineBanner
-import lk.motormila.app.ui.components.PriceChart
+import lk.motormila.app.ui.components.confidenceWord
+import lk.motormila.app.ui.components.detail
+import lk.motormila.app.ui.components.fitWidth
+import lk.motormila.app.ui.components.headline
+import lk.motormila.app.ui.components.listingCardKey
+import lk.motormila.app.ui.components.listingPriceKey
+import lk.motormila.app.ui.components.motormilaSharedBoundsTransform
 import lk.motormila.app.ui.navigation.LocalNavAnimatedVisibilityScope
 import lk.motormila.app.ui.navigation.LocalSharedTransitionScope
-import lk.motormila.app.ui.navigation.listingHeroKey
 import lk.motormila.app.ui.share.FmvShare
 import lk.motormila.app.ui.share.OutboundLinks
 import lk.motormila.app.ui.theme.MmColors
 import lk.motormila.app.ui.theme.MmMotion
 import lk.motormila.app.ui.theme.MmShapes
+import lk.motormila.app.ui.theme.MmSpacing
 import lk.motormila.app.ui.theme.MmType
 import lk.motormila.app.ui.theme.MotormilaGood
 import lk.motormila.app.ui.theme.MotormilaGoodContainer
@@ -162,35 +125,16 @@ import lk.motormila.app.ui.theme.MotormilaPrimary
 import lk.motormila.app.ui.theme.MotormilaPrimaryBright
 import lk.motormila.app.ui.theme.MotormilaPrimaryGlow
 import lk.motormila.app.ui.theme.MotormilaRadius
-import lk.motormila.app.ui.theme.MmSpacing
 import lk.motormila.app.ui.theme.MotormilaSecondaryText
 import lk.motormila.app.ui.theme.MotormilaSurface as MotormilaSurfaceColor
 import lk.motormila.app.ui.theme.MotormilaSurfaceHigh
 import lk.motormila.app.ui.theme.MotormilaSurfaceHighest
 import lk.motormila.app.ui.theme.MotormilaWarn
 import lk.motormila.app.ui.theme.MotormilaWarnContainer
-import lk.motormila.app.ui.components.motormilaSharedBoundsTransform
-import lk.motormila.app.ui.theme.rememberHaptics
-import java.text.NumberFormat
-import java.util.Locale
-import kotlin.math.absoluteValue
-import kotlin.math.roundToInt
+import lk.motormila.app.ui.theme.glassBackdrop
+import lk.motormila.app.ui.theme.tabular
 
-/**
- * Listing detail. Signature MUST match NavGraph:
- * `ListingDetailScreen(listingId: Int, onBack: () -> Unit,
- * onCompare: (List<Int>) -> Unit, onEstimate: () -> Unit)`.
- *
- * Upgraded with full web platform parity:
- * - 2x3 Bento Specifications Grid (Year, Mileage, Transmission, Fuel, Condition, Body Type)
- * - Collapsible CBSL Lease Payment Calculator (down payment clamped to >= 60%, 1-5 yr tenure)
- * - Collapsible Import Duty and Tax Estimator (import/reconditioned listings only)
- * - Seller Trust, WhatsApp Share Intent, View on Source (allowlisted outbound links)
- *
- * v1.9.0 (audit P1-A/B/E): one price hero (30sp + "Asking price" eyebrow, compact
- * sticky bar), fabricated Intelligence Pills removed, neutral seller fallback,
- * tri-state secondary loads with inline retry + dedicated 404 state, localized copy.
- */
+/** Buyer decision: the asking price, comparison evidence, recorded movement and original ad. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListingDetailScreen(
@@ -206,11 +150,8 @@ fun ListingDetailScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val haptics = LocalHapticFeedback.current
-    var showFmvExplain by remember { mutableStateOf(false) }
-    var viewerPage by remember { mutableStateOf<Int?>(null) }
+    var viewerPage by remember(state.listing?.id) { mutableStateOf<Int?>(null) }
     val mmHaptics = lk.motormila.app.ui.theme.MmHaptics.current
-    var showWhy by remember { mutableStateOf(false) }
     // Watchlist toggle failures surface as a snackbar (one-shot state from the VM).
     val snackbarHostState = remember { SnackbarHostState() }
     val watchFailedMsg = stringResource(R.string.mm_detail_watch_failed)
@@ -220,28 +161,8 @@ fun ListingDetailScreen(
             viewModel.clearWatchError()
         }
     }
-    // Measured height of the sticky action bar (it grows with font scale);
-    // hoisted so the snackbar can sit above it in every branch.
-    var actionBarHeightPx by androidx.compose.runtime.remember {
-        androidx.compose.runtime.mutableIntStateOf(0)
-    }
-    // THE price verdict for this listing — computed once and handed to every
-    // price panel (deal row, ring/badge, gauge, ladder, history line, Why sheet,
-    // share card) so they cannot contradict each other. FMV loaded: its
-    // estimate is the reference and the stored cohort median the cross-check;
-    // not loaded yet: the stored median, exactly like the card.
-    val priceVerdict = remember(state.listing, state.fmv) {
-        state.listing?.let { l ->
-            lk.motormila.app.core.price.PriceVerdicts.resolve(
-                priceLkr = l.priceLkr,
-                marketMedianLkr = l.marketMedianLkr,
-                ctx = l.priceContext,
-                fmv = state.fmv?.toReference(),
-            )
-        }
-    }
-    val isLease = remember(state.listing) {
-        state.listing?.let { MmLeaseTakeover.detect(it.title, it.model) } == true
+    val priceVerdict = remember(state.listing, state.fmv, state.fmvState) {
+        state.listing?.let { buyerVerdict(it, state.fmv.takeIf { state.fmvState == DetailLoadState.LOADED }) }
     }
 
     LaunchedEffect(listingId) {
@@ -257,9 +178,6 @@ fun ListingDetailScreen(
     val stretch = rememberDetailStretch()
     val galleryIndex = if (state.isOffline) 1 else 0
     val density = androidx.compose.ui.platform.LocalDensity.current
-    // Room for the sticky price / "View on source" bar: its measured height
-    // (it grows with font scale), never less than the original 120 dp.
-    val actionBarRoom = with(density) { maxOf(120.dp, actionBarHeightPx.toDp() + 16.dp) }
     val screenW = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp
     val statusTop = androidx.compose.foundation.layout.WindowInsets.statusBars
         .asPaddingValues().calculateTopPadding()
@@ -292,7 +210,7 @@ fun ListingDetailScreen(
                     EmptyState(
                         title = stringResource(R.string.mm_detail_gone_title),
                         body = stringResource(R.string.mm_detail_gone_body),
-                        ctaLabel = stringResource(R.string.mm_detail_back_to_search),
+                        ctaLabel = stringResource(R.string.buyer_back),
                         onCta = onBack,
                         modifier = Modifier.fillMaxSize().padding(top = statusTop + 56.dp),
                     )
@@ -308,8 +226,7 @@ fun ListingDetailScreen(
                 else -> {
                     val listing = state.listing!!
                     val galleryImages = listing.images.ifEmpty { listOfNotNull(listing.thumbnailUrl) }
-                    val sourceUrl = listing.externalUrl ?: listing.detailUrl
-                    Box(Modifier.fillMaxSize()) {
+                    val sourceLink = detailSourceLink(listing.externalUrl, listing.detailUrl, listing.isActive)
                     LazyColumn(
                         state = listState,
                         modifier = Modifier
@@ -317,7 +234,7 @@ fun ListingDetailScreen(
                             .glassBackdrop(detailBackdrop)
                             // Pull-down past the top slides the page down; the photo zooms to fill.
                             .graphicsLayer { translationY = stretch.offset },
-                        contentPadding = PaddingValues(bottom = actionBarRoom),
+                        contentPadding = PaddingValues(bottom = 32.dp + androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         if (state.isOffline) {
@@ -356,77 +273,40 @@ fun ListingDetailScreen(
                                 },
                             )
                         }
-                        item {
-                            val verdict = remember(priceVerdict, isLease, state.isPro, state.fmv) {
-                                MmDealVerdict.from(
-                                    priceVerdict ?: listing.rowVerdict(),
-                                    isLeaseTakeover = isLease,
-                                    // Free rows carry no score; a loaded FMV verdict is shown to everyone.
-                                    ratingAllowed = state.isPro || state.fmv != null,
-                                )
-                            }
-                            DealVerdictRow(
-                                verdict = verdict,
-                                onWhy = { showWhy = true },
-                                modifier = Modifier.padding(horizontal = MmSpacing.gutter),
-                            )
-                        }
-                        item {
-                            PriceDealSection(
-                                listing = listing,
-                                isPro = state.isPro,
-                                history = state.history,
-                                verdict = priceVerdict,
-                                onDealShown = {
-                                    val ok = priceVerdict as? lk.motormila.app.core.price.PriceVerdict.Ok
-                                    if (ok != null && ok.band == lk.motormila.app.core.price.VerdictBand.BELOW && !ok.verifyFirst) {
-                                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        item(key = "decision-${listing.id}") {
+                            Column(Modifier.padding(horizontal = MmSpacing.gutter), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                PriceDealSection(listing)
+                                when {
+                                    priceVerdict != null -> {
+                                        Text(priceVerdict.headline(), style = MmType.current.titleS, color = MmColors.current.textPrimary)
+                                        ExpandableToolRow(stringResource(R.string.buyer_comparison_evidence)) {
+                                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                if (priceVerdict is PriceVerdict.Withheld) {
+                                                    Text(priceVerdict.detail(), style = MmType.current.bodyS)
+                                                } else if (priceVerdict is PriceVerdict.Ok) {
+                                                    Text(stringResource(R.string.v19_search_typical_price, LkrFormat.full(priceVerdict.referenceLkr)))
+                                                    Text(stringResource(R.string.mm_why_body), style = MmType.current.bodyS)
+                                                    if (priceVerdict.verifyFirst) Text(stringResource(R.string.mm_why_verify), style = MmType.current.bodyS)
+                                                }
+                                                state.fmv?.takeIf { it.sampleCount > 0 && it.confidence.lowercase() in setOf("low", "medium", "high") }?.let { fmv ->
+                                                    Text(stringResource(R.string.mm_fmv_explain_sample, fmv.sampleCount, confidenceWord(fmv.confidence)), style = MmType.current.caption)
+                                                }
+                                            }
+                                        }
                                     }
-                                },
-                            )
-                        }
-                        item {
-                            HeroActionsRow(
-                                listing = listing,
-                                onViewSource = {
-                                    val url = listing.externalUrl ?: listing.detailUrl
-                                    if (url != null) openUrl(context, url)
-                                },
-                                onShareWhatsApp = { shareWhatsApp(context, listing, priceVerdict) },
-                                onShare = { shareListing(context, listing, priceVerdict) },
-                                modifier = Modifier.padding(horizontal = MmSpacing.gutter),
-                            )
-                        }
-                        if (state.fmv != null) {
-                            item {
-                                MotormilaSurface(modifier = Modifier.padding(horizontal = MmSpacing.gutter)) {
-                                    // Withheld → a plain "why there is no rating" card, never a gauge.
-                                    FmvGauge(
-                                        verdict = priceVerdict ?: listing.rowVerdict(),
-                                        askingLkr = listing.priceLkr,
-                                        confidence = state.fmv!!.confidence,
-                                        onExplainClick = { showFmvExplain = true },
-                                        modifier = Modifier.fillMaxWidth(),
-                                    )
+                                    state.fmvState == DetailLoadState.FAILED -> InlineRetryRow(stringResource(R.string.mm_detail_fmv_failed), viewModel::retryFmv)
+                                    (state.isLoading || state.fmvState == DetailLoadState.LOADING) && state.error == null ->
+                                        Text(stringResource(R.string.buyer_comparison_loading), style = MmType.current.bodyS)
+                                    else -> Text(stringResource(R.string.buyer_no_comparison), style = MmType.current.bodyS)
                                 }
-                            }
-                            if (priceVerdict is lk.motormila.app.core.price.PriceVerdict.Ok) {
-                                item {
-                                    DealLadder(
-                                        verdict = priceVerdict,
-                                        askingLkr = listing.priceLkr,
-                                        modifier = Modifier.padding(horizontal = MmSpacing.gutter),
-                                    )
+                                val change = remember(listing.id, state.history) { recentAskChange(listing.id, state.history) }
+                                if (change != null) {
+                                    Text(stringResource(R.string.buyer_last_change, LkrFormat.full(change.from), LkrFormat.full(change.to)), style = MmType.current.bodyM)
+                                    observationDate(change.at)?.let { Text(it, style = MmType.current.caption, color = MmColors.current.textSecondary) }
                                 }
-                            }
-                        }
-                        if (state.fmv == null && state.fmvState == DetailLoadState.FAILED) {
-                            item {
-                                InlineRetryRow(
-                                    text = stringResource(R.string.mm_detail_fmv_failed),
-                                    onRetry = viewModel::retryFmv,
-                                    modifier = Modifier.padding(horizontal = MmSpacing.gutter),
-                                )
+                                DetailActionBar(listing.priceLkr, sourceDisplayName(listing.source),
+                                    copyOnly = sourceLink?.copyOnly == true,
+                                    onViewSource = sourceLink?.let { link -> { link.handOff(context) } })
                             }
                         }
                         item {
@@ -435,33 +315,11 @@ fun ListingDetailScreen(
                                 modifier = Modifier.padding(horizontal = MmSpacing.gutter),
                             )
                         }
-                        // Calculators are tools, not content: collapsed by default so
-                        // history / seller are not buried under ~600 dp of always-on UI.
-                        item {
-                            ExpandableToolRow(
-                                title = stringResource(R.string.mm_detail_estimate_monthly),
-                                modifier = Modifier.padding(horizontal = MmSpacing.gutter),
-                            ) {
-                                LeasePaymentCalculator(
-                                    priceLkr = listing.priceLkr ?: 12_500_000.0,
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
-                            }
-                        }
-                        // Duty only makes sense for an import (reconditioned / brand-new
-                        // import / unregistered); everyone else reaches it via Tools → Tax.
-                        if (isImportContext(listing)) {
-                            item {
-                                ExpandableToolRow(
-                                    title = stringResource(R.string.mm_detail_estimate_duty),
-                                    modifier = Modifier.padding(horizontal = MmSpacing.gutter),
-                                ) {
-                                    ImportDutyEstimator(
-                                        priceLkr = listing.priceLkr ?: 10_000_000.0,
-                                        engineCc = listing.engineCc ?: 1500.0,
-                                        initialFuel = listing.fuelType,
-                                        modifier = Modifier.fillMaxWidth(),
-                                    )
+                        val leasePrice = leaseExamplePrice(listing)
+                        if (leasePrice != null) {
+                            item(key = "lease-${listing.id}") {
+                                ExpandableToolRow(stringResource(R.string.mm_detail_estimate_monthly), Modifier.padding(horizontal = MmSpacing.gutter)) {
+                                    LeasePaymentCalculator(leasePrice)
                                 }
                             }
                         }
@@ -483,10 +341,6 @@ fun ListingDetailScreen(
                                 sellerState = state.sellerState,
                                 onRetrySeller = viewModel::retrySeller,
                                 sourceName = sourceDisplayName(listing.source),
-                                onViewSource = {
-                                    val url = listing.externalUrl ?: listing.detailUrl
-                                    if (url != null) openUrl(context, url)
-                                },
                                 modifier = Modifier.padding(horizontal = MmSpacing.gutter),
                             )
                         }
@@ -494,17 +348,13 @@ fun ListingDetailScreen(
                             BeforeYouPayCard(Modifier.padding(horizontal = MmSpacing.gutter))
                         }
                         item {
-                            DeepLinksRow(
-                                onEstimate = onEstimate,
-                                onTax = onEstimate,
-                                onLease = onEstimate,
-                                onMap = {
-                                    val q = "${listing.district ?: ""} ${listing.city ?: ""}".trim()
-                                    val query = android.net.Uri.encode(q.ifBlank { "Sri Lanka" })
-                                    openUrl(context, "https://www.openstreetmap.org/search?query=$query")
-                                },
-                                modifier = Modifier.padding(horizontal = MmSpacing.gutter),
-                            )
+                            Column(Modifier.padding(horizontal = MmSpacing.gutter), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                MotormilaGhostButton(label = stringResource(R.string.mm_deep_estimate), onClick = onEstimate)
+                                val place = listOfNotNull(listing.city, listing.district).filter { it.isNotBlank() }.distinct().joinToString(", ")
+                                if (place.isNotEmpty()) MotormilaGhostButton(label = stringResource(R.string.mm_deep_map), onClick = {
+                                    openUrl(context, "https://www.openstreetmap.org/search?query=${android.net.Uri.encode(place)}")
+                                })
+                            }
                         }
                         if (state.similar.isNotEmpty()) {
                             item {
@@ -526,7 +376,7 @@ fun ListingDetailScreen(
                                             width = cardWidth,
                                             title = s.displayName,
                                             imageUrl = s.heroImageUrl,
-                                            price = s.formattedPrice(),
+                                            price = MmPriceFormat.compact(s.priceLkr?.takeIf { it.isFinite() }, stringResource(R.string.mm_price_on_request)),
                                             // Push a new Detail entry so Back returns to this listing;
                                             // without a navigator, swap the content in place.
                                             onClick = {
@@ -557,45 +407,22 @@ fun ListingDetailScreen(
                                 )
                             }
                         }
-                        item {
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = MmSpacing.gutter),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                MotormilaGhostButton(
-                                    label = stringResource(R.string.listing_share_whatsapp),
-                                    onClick = { shareWhatsApp(context, listing, priceVerdict) },
-                                    fillMaxWidth = false,
-                                    leadingIcon = Icons.AutoMirrored.Filled.Chat,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
-                        }
-                    }
-                    androidx.compose.runtime.CompositionLocalProvider(
-                        lk.motormila.app.ui.theme.LocalGlassEnv provides lk.motormila.app.ui.theme.LocalGlassEnv.current.copy(backdrop = detailBackdrop),
-                    ) {
-                    DetailActionBar(
-                        priceLkr = listing.priceLkr,
-                        sourceName = sourceDisplayName(listing.source),
-                        onViewSource = sourceUrl?.let { url -> { openUrl(context, url) } },
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .onSizeChanged { actionBarHeightPx = it.height },
-                    )
-                    }
                     }
                 }
             }
         }
-        val listingNow = state.listing
+        val listingNow = state.listing.takeUnless { state.notFound }
         androidx.compose.runtime.CompositionLocalProvider(
             lk.motormila.app.ui.theme.LocalGlassEnv provides lk.motormila.app.ui.theme.LocalGlassEnv.current.copy(backdrop = detailBackdrop),
         ) {
+            val shareText = listingNow?.let { listing ->
+                val ask = MmPriceFormat.full(listing.priceLkr?.takeIf { it.isFinite() }, stringResource(R.string.mm_price_on_request))
+                listOfNotNull(listing.displayName, "${stringResource(R.string.mm_detail_asking)}: $ask", priceVerdict?.headline(),
+                    FmvShare.listingShareUrl(listing.id)).joinToString("\n")
+            }
             DetailTopChrome(
                 title = listingNow?.displayName ?: "",
+                showListingActions = listingNow != null,
                 collapse = collapse,
                 backdrop = detailBackdrop,
                 onBack = onBack,
@@ -604,16 +431,16 @@ fun ListingDetailScreen(
                     if (state.isWatched) mmHaptics.unsave() else mmHaptics.save()
                     viewModel.toggleWatch()
                 },
-                onShare = { listingNow?.let { shareListing(context, it, priceVerdict) } },
+                onShare = { shareText?.let { shareListing(context, it) } },
                 modifier = Modifier.align(Alignment.TopStart),
             )
         }
-        // Watchlist-toggle failure snackbar, parked above the sticky action bar.
+        // Watchlist-toggle failure snackbar.
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(start = 16.dp, end = 16.dp, bottom = actionBarRoom),
+                .navigationBarsPadding().padding(16.dp),
         )
     }
 
@@ -629,60 +456,7 @@ fun ListingDetailScreen(
             )
         }
     }
-    if (showWhy && viewerListing != null) {
-        val resolved = priceVerdict ?: viewerListing.rowVerdict()
-        DealWhySheet(
-            verdict = MmDealVerdict.from(resolved, isLeaseTakeover = isLease),
-            askingLkr = viewerListing.priceLkr,
-            typicalLkr = (resolved as? lk.motormila.app.core.price.PriceVerdict.Ok)?.referenceLkr,
-            comparables = state.fmv?.sampleCount,
-            onDismiss = { showWhy = false },
-            onFullEstimate = {
-                showWhy = false
-                onEstimate()
-            },
-        )
-    }
 
-    if (showFmvExplain && state.fmv != null) {
-        ModalBottomSheet(
-            onDismissRequest = { showFmvExplain = false },
-            shape = lk.motormila.app.ui.theme.MmShapes.sheet,
-            containerColor = lk.motormila.app.ui.components.glassSheetColor(),
-        ) {
-            lk.motormila.app.ui.components.WindowBackdropBlur()
-            Column(Modifier.padding(20.dp)) {
-                Text(stringResource(R.string.ui_detail_how_this_valuation_works), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineMedium)
-                Spacer(Modifier.height(8.dp))
-                val fmv = state.fmv!!
-                Text(
-                    stringResource(
-                        when (fmv.method) {
-                            "ols_comps" -> R.string.mm_method_model
-                            "adjusted_median" -> R.string.mm_method_adjusted
-                            else -> R.string.mm_method_cohort
-                        },
-                    ),
-                    style = MaterialTheme.typography.labelLarge,
-                )
-                if (fmv.sampleCount > 0) {
-                    Text(
-                        stringResource(R.string.mm_fmv_explain_sample, fmv.sampleCount, lk.motormila.app.ui.components.confidenceWord(fmv.confidence)),
-                        style = MaterialTheme.typography.labelLarge,
-                    )
-                }
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    stringResource(R.string.mm_why_body),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(16.dp))
-                MotormilaPrimaryButton(label = stringResource(R.string.mm_why_full_estimate), onClick = onEstimate)
-                Spacer(Modifier.height(12.dp))
-            }
-        }
-    }
 }
 
 /**
@@ -738,14 +512,11 @@ private fun detailContainerTransform(listingId: Int, fromCard: Boolean): Modifie
 @Composable
 internal fun PriceDealSection(
     listing: Listing,
-    isPro: Boolean,
-    onDealShown: () -> Unit,
+    isPro: Boolean = false,
+    onDealShown: () -> Unit = {},
     history: PriceHistory? = null,
-    /** The screen's one resolved verdict; null = the row's own (previews). */
     verdict: lk.motormila.app.core.price.PriceVerdict? = null,
 ) {
-    val resolved = verdict ?: remember(listing) { listing.rowVerdict() }
-    val ok = resolved as? lk.motormila.app.core.price.PriceVerdict.Ok
     LaunchedEffect(listing.id) { onDealShown() }
     // The card container key (listingCardKey) lives ONLY on the Detail root
     // (detailContainerTransform). A second sharedBounds with the same key here
@@ -754,10 +525,8 @@ internal fun PriceDealSection(
     val sharedScope = LocalSharedTransitionScope.current
     val animatedScope = LocalNavAnimatedVisibilityScope.current
     Column(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = MmSpacing.gutter),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         val titleShared = if (sharedScope != null && animatedScope != null) {
             with(sharedScope) {
@@ -776,333 +545,18 @@ internal fun PriceDealSection(
             color = MmColors.current.textPrimary,
             modifier = titleShared,
         )
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            // Price hero: the ONE full-rupee figure on the page (the sticky bar
-            // is compact-only). "Asking price" eyebrow + 30sp tabular price that
-            // shrinks to fit instead of clipping at 200 % font scale.
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    stringResource(R.string.mm_detail_asking),
-                    style = MmType.current.overline,
-                    color = MmColors.current.textSecondary,
-                )
-                PriceSlot(
-                    listing = listing,
-                    history = history,
-                )
-            }
-            // Free tier already shows the PRO badge + locked "Deal score" row below;
-            // an empty ring with a dash next to the price read as a broken widget.
-            if (isPro && ok != null) {
-                // Signed percent vs the typical asking price — the same number as the
-                // badge and gauge ("−12%" / "+6%"), never a bare score.
-                val sign = if (ok.gapPct < 0) "\u2212" else "+"
-                DealRing(
-                    score = ok.dealScore,
-                    band = ok.band.toDealBand(),
-                    label = if (ok.pct == 0) "0%" else "$sign${ok.pct}%",
-                    description = ok.headline(),
-                )
-            }
-        }
-        if (isPro) {
-            // Same verdict as the deal row / gauge. Withheld: no badge here —
-            // the price card below says why (never a Pro lock for a Pro user).
-            if (ok != null) DealBadge(band = ok.band.toDealBand(), score = ok.dealScore, pct = ok.pct)
-        } else if (ok != null) {
-            // Free tier: backend nulls deal_score — LOCKED badge + blurred value
-            // gatekept behind UserSession.isPro (DOMAIN_CONTRACT §5). Only when
-            // this listing has a rating to unlock: a Pro lock over a withheld
-            // verdict promises a score that doesn't exist.
-            DealBadge(band = DealBand.LOCKED, score = null)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    stringResource(R.string.mm_deal_score_label),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.width(8.dp))
-                LockedValue(placeholder = "8.4")
-            }
-        }
-        // Intelligence Pills removed (audit P1-A): sell-speed / ad-health /
-        // "typical mileage" were fabricated metrics with no data behind them.
-    }
-}
-
-/**
- * Price slot on the detail screen. Normally the static price text — the
- * shared-bounds target for the card → detail price morph (spec §3) — which
- * swaps via a short crossfade to the [PriceDropTicker] choreography once a
- * genuine price drop is detected in the price history.
- */
-@Composable
-private fun PriceSlot(
-    listing: Listing,
-    history: PriceHistory?,
-    modifier: Modifier = Modifier,
-) {
-    // The shared key lives on this container so the card → detail (and back)
-    // morph keeps working whether the static price or the ticker is showing —
-    // only one of them is ever composed at a time.
-    val sharedScope = LocalSharedTransitionScope.current
-    val animatedScope = LocalNavAnimatedVisibilityScope.current
-    val priceShared = if (sharedScope != null && animatedScope != null) {
-        with(sharedScope) {
-            Modifier.sharedBounds(
-                rememberSharedContentState(key = listingPriceKey(listing.id)),
-                animatedScope,
-                boundsTransform = motormilaSharedBoundsTransform(),
-                resizeMode = lk.motormila.app.ui.components.PriceMorphResize,
-            )
-        }
-    } else {
-        Modifier
-    }
-    // Hero price: 30sp display-tier tabular figures (MmType.priceL), the one
-    // full-rupee figure on the page. MmFitText / fit styles below keep it whole
-    // at 200 % font scale.
-    val priceStyle = MmType.current.priceL.copy(color = MmColors.current.textPrimary)
-    val drop = remember(listing.id, history) { detectPriceDrop(listing.id, history) }
-    // Shared bounds hug the price text (not the weight(1f) slot): matched
-    // against the slot's full row width, the card's short "Rs 1.4 Mn" was
-    // scaled up ~3x mid-morph.
-    // The slot width is read once here so every price inside can shrink to fit
-    // it (never clip) at 200 % font scale or on narrow phones.
-    BoxWithConstraints(modifier = modifier) {
-        val slotWidthPx = constraints.maxWidth
-        Box(Modifier.then(priceShared)) {
-            Crossfade(
-                targetState = drop,
-                animationSpec = tween(durationMillis = 200),
-                label = "price-slot",
-            ) { activeDrop ->
-                if (activeDrop != null) {
-                    PriceDropTicker(drop = activeDrop, priceStyle = priceStyle, maxWidthPx = slotWidthPx)
-                } else {
-                    lk.motormila.app.ui.components.MmFitText(
-                        text = LkrFormat.priceFull(listing.priceLkr),
-                        style = priceStyle,
-                        color = MotormilaOnSurface,
-                        minScale = 0.5f,
-                    )
-                }
-            }
-        }
-    }
-}
-
-/** A detected most-recent price cut. */
-private data class PriceDrop(
-    /** Stable id for one drop event — the ticker choreography is keyed on this. */
-    val dropId: String,
-    val oldPriceLkr: Double,
-    val newPriceLkr: Double,
-)
-
-/**
- * Detects the most recent price cut from the last two tracked points.
- * Returns null unless the latest observation is a genuine cut — dust
- * (< 0.5%) is ignored so the ticker only fires on meaningful drops.
- */
-private fun detectPriceDrop(listingId: Int, history: PriceHistory?): PriceDrop? {
-    // Guard against stale history: similar-card taps swap the listing in
-    // place while the previous history is still in state.
-    if (history == null || history.listingId != listingId) return null
-    val points = history.points
-    if (points.size < 2) return null
-    val previous = points[points.size - 2]
-    val latest = points.last()
-    if (latest.priceLkr >= previous.priceLkr || previous.priceLkr <= 0) return null
-    val cutFraction = (previous.priceLkr - latest.priceLkr) / previous.priceLkr
-    if (cutFraction < 0.005) return null
-    val dropId = "$listingId@${history.lastChangeAt ?: latest.scrapedAt}"
-    return PriceDrop(dropId = dropId, oldPriceLkr = previous.priceLkr, newPriceLkr = latest.priceLkr)
-}
-
-/**
- * Motion spec §7.2 — the price-drop ticker superpower.
- *
- * 900ms choreography, played ONCE per [PriceDrop.dropId] (all animation
- * state is keyed on the drop id, so recompositions never replay it):
- * 1. the old price strike-through draws left → right (400ms),
- * 2. digits roll down to the new price via [SlidingNumber] (650ms),
- * 3. a Deal-Green flash washes the price row,
- * 4. [HapticHelper.tick] lands on settle.
- *
- * Reduced motion collapses the whole moment to a simple crossfade.
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun PriceDropTicker(
-    drop: PriceDrop,
-    priceStyle: TextStyle,
-    maxWidthPx: Int,
-    modifier: Modifier = Modifier,
-) {
-    // Reduced motion: the same settled layout (struck-through old price + new
-    // price) without the roll, flash or haptic. It used to show only the new
-    // price, so reduced-motion users never saw that the price had dropped.
-    val reducedMotion = rememberReducedMotion()
-    val haptics = rememberHaptics()
-    var started by remember(drop.dropId) { mutableStateOf(false) }
-    val strikeProgress by animateFloatAsState(
-        targetValue = if (started || reducedMotion) 1f else 0f,
-        animationSpec = spring(dampingRatio = 1f, stiffness = Spring.StiffnessMediumLow, visibilityThreshold = 0.001f),
-        label = "drop-strike",
-    )
-    val flash = remember(drop.dropId) { Animatable(0f) }
-    LaunchedEffect(drop.dropId) {
-        started = true
-        if (reducedMotion) return@LaunchedEffect
-        // Green wash in, then out; the tick lands on settle (~900ms total).
-        flash.animateTo(0.22f, tween(durationMillis = 150))
-        flash.animateTo(0f, tween(durationMillis = 600))
-        delay(150)
-        haptics.tick()
-    }
-    // Each price is fitted to the FULL slot width on its own (sized for the
-    // wider of old/new so the ticker never resizes mid-roll); the FlowRow puts
-    // the new price under the struck-through old one when both don't fit on
-    // one line (narrow phones, large font scale).
-    val newPriceStyle = rememberSlidingLkrFitStyle(
-        valueLkr = maxOf(drop.oldPriceLkr, drop.newPriceLkr),
-        style = priceStyle,
-        maxWidthPx = maxWidthPx,
-        full = true,
-    )
-    val oldBase = MaterialTheme.typography.headlineMedium.copy(
-        fontFeatureSettings = "tnum",
-        color = MotormilaSecondaryText,
-    )
-    val oldPriceStyle = rememberFitTextStyle(LkrFormat.full(drop.oldPriceLkr), oldBase, maxWidthPx)
-    Box(modifier = modifier) {
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            // Old price with a strike-through that draws left → right.
-            Box(Modifier.align(Alignment.CenterVertically)) {
-                Text(
-                    text = LkrFormat.full(drop.oldPriceLkr),
-                    style = oldPriceStyle,
-                    maxLines = 1,
-                    softWrap = false,
-                )
-                Canvas(Modifier.matchParentSize()) {
-                    val y = size.height / 2f
-                    drawLine(
-                        color = MotormilaGood,
-                        start = Offset(0f, y),
-                        end = Offset(size.width * strikeProgress, y),
-                        strokeWidth = 2.dp.toPx(),
-                    )
-                }
-            }
-            if (reducedMotion) {
-                Text(
-                    text = LkrFormat.full(drop.newPriceLkr),
-                    style = newPriceStyle,
-                    maxLines = 1,
-                    softWrap = false,
-                    modifier = Modifier.align(Alignment.CenterVertically).fitWidth(),
-                )
-            } else {
-                SlidingLkr(
-                    valueLkr = if (started) drop.newPriceLkr else drop.oldPriceLkr,
-                    style = newPriceStyle,
-                    full = true,
-                    modifier = Modifier.align(Alignment.CenterVertically),
-                )
-            }
-        }
-        if (flash.value > 0.005f) {
-            Box(
-                Modifier
-                    .matchParentSize()
-                    .background(MotormilaGood.copy(alpha = flash.value)),
-            )
-        }
-    }
-}
-
-@Composable
-private fun HeroActionsRow(
-    listing: Listing,
-    onViewSource: () -> Unit,
-    onShareWhatsApp: () -> Unit,
-    onShare: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val sourceName = sourceDisplayName(listing.source)
-    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-    // Attribution: every listing is credited to the site it was listed on.
-    Text(
-        text = stringResource(R.string.listing_listed_on, sourceName),
-        style = MaterialTheme.typography.labelMedium,
-        color = MotormilaSecondaryText,
-    )
-    // Large Dynamic Type (> 1.3x): two side-by-side buttons can't hold their labels
-    // ("Share o… WhatsA pp" at 200 %), so stack them full width instead.
-    val largeText = androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f
-    if (largeText) {
-        MotormilaPrimaryButton(
-            label = stringResource(R.string.listing_view_on_source, sourceName),
-            leadingIcon = Icons.AutoMirrored.Filled.OpenInNew,
-            onClick = onViewSource,
+        val place = listOfNotNull(listing.city, listing.district).filter { it.isNotBlank() }.distinct().joinToString(", ")
+        if (place.isNotEmpty()) Text(place, style = MmType.current.bodyS, color = MmColors.current.textSecondary)
+        Text(stringResource(R.string.mm_detail_asking), style = MmType.current.labelS, color = MmColors.current.textSecondary)
+        val priceShared = if (sharedScope != null && animatedScope != null) with(sharedScope) {
+            Modifier.sharedBounds(rememberSharedContentState(key = listingPriceKey(listing.id)), animatedScope,
+                boundsTransform = motormilaSharedBoundsTransform(), resizeMode = lk.motormila.app.ui.components.PriceMorphResize)
+        } else Modifier
+        val fallback = stringResource(R.string.mm_price_on_request)
+        lk.motormila.app.ui.components.MmFitText(
+            text = MmPriceFormat.full(listing.priceLkr?.takeIf { it.isFinite() }, fallback),
+            style = MmType.current.priceL, color = MmColors.current.textPrimary, modifier = priceShared,
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            MotormilaGhostButton(
-                label = stringResource(R.string.listing_share_whatsapp),
-                fillMaxWidth = false,
-                leadingIcon = Icons.AutoMirrored.Filled.Chat,
-                modifier = Modifier.weight(1f),
-                onClick = onShareWhatsApp,
-            )
-            MotormilaIconAction(
-                icon = Icons.Filled.Share,
-                contentDescription = stringResource(R.string.listing_share_cd),
-                onClick = onShare,
-            )
-        }
-    } else {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        MotormilaPrimaryButton(
-            label = stringResource(R.string.listing_view_on_source, sourceName),
-            fillMaxWidth = false,
-            leadingIcon = Icons.AutoMirrored.Filled.OpenInNew,
-            modifier = Modifier.weight(1f),
-            onClick = onViewSource,
-        )
-        // Short "WhatsApp" label (icon + word) so it never wraps beside the
-        // primary button ("Share on / WhatsApp" at 100 %); the full phrase stays
-        // as the accessibility label.
-        val waCd = stringResource(R.string.listing_share_whatsapp)
-        MotormilaGhostButton(
-            label = stringResource(R.string.listing_share_whatsapp_short),
-            fillMaxWidth = false,
-            leadingIcon = Icons.AutoMirrored.Filled.Chat,
-            modifier = Modifier.semantics { contentDescription = waCd },
-            onClick = onShareWhatsApp,
-        )
-        MotormilaIconAction(
-            icon = Icons.Filled.Share,
-            contentDescription = stringResource(R.string.listing_share_cd),
-            onClick = onShare,
-        )
-    }
-    }
     }
 }
 
@@ -1231,7 +685,7 @@ internal fun BentoSpecsGrid(listing: Listing, modifier: Modifier = Modifier) {
     val condVal = listing.condition
         ?.replaceFirstChar { it.uppercase() }
         ?.replace("_", " ")
-        ?.ifBlank { stringResource(R.string.mm_spec_preowned) } ?: stringResource(R.string.mm_spec_preowned)
+        ?.ifBlank { unknown } ?: unknown
     val bodyVal = listing.bodyType
         ?.replace("_", " ")
         ?.trim()
@@ -1302,7 +756,7 @@ private fun BentoCell(item: BentoSpecItem, modifier: Modifier = Modifier) {
             ) {
                 Icon(
                     imageVector = item.icon,
-                    contentDescription = item.label,
+                    contentDescription = null,
                     tint = MotormilaPrimary,
                     modifier = Modifier.size(20.dp),
                 )
@@ -1350,6 +804,7 @@ private fun ExpandableToolRow(
 ) {
     val c = MmColors.current
     var expanded by remember { mutableStateOf(false) }
+    val expandState = stringResource(if (expanded) R.string.buyer_expanded else R.string.buyer_collapsed)
     val rotation by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
         animationSpec = tween(MmMotion.Base, easing = MmMotion.Standard),
@@ -1363,7 +818,7 @@ private fun ExpandableToolRow(
             border = BorderStroke(1.dp, c.outline),
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = MmSpacing.touch),
+                .heightIn(min = MmSpacing.touch).semantics { stateDescription = expandState },
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = MmSpacing.cardPadding, vertical = 12.dp),
@@ -1425,31 +880,20 @@ private fun InlineRetryRow(
     }
 }
 
-/**
- * The import-duty estimator only makes sense for an import context:
- * reconditioned / brand-new (imported) / unregistered. Locally-used cars
- * reach the estimator via the Tools → Tax deep link instead.
- */
-private fun isImportContext(listing: Listing): Boolean {
-    val condition = listing.condition?.lowercase()?.replace('_', ' ') ?: return false
-    return condition.contains("recond") ||
-        condition.contains("import") ||
-        condition.contains("unregistered") ||
-        condition.contains("brand new")
-}
-
 @Composable
 private fun LeasePaymentCalculator(
     priceLkr: Double,
     modifier: Modifier = Modifier,
 ) {
-    val safePrice = if (priceLkr > 0) priceLkr else 12_500_000.0
     var downPaymentPct by remember { mutableStateOf(60f) }
     var interestRate by remember { mutableStateOf(15.0) }
     var tenureYears by remember { mutableStateOf(5) }
 
-    val downPayment = safePrice * (downPaymentPct / 100.0)
-    val principal = (safePrice - downPayment).coerceAtLeast(0.0)
+    val lowerRate = stringResource(R.string.buyer_lower_rate)
+    val raiseRate = stringResource(R.string.buyer_raise_rate)
+    val depositLabel = stringResource(R.string.mm_calc_down_payment)
+    val downPayment = priceLkr * (downPaymentPct / 100.0)
+    val principal = (priceLkr - downPayment).coerceAtLeast(0.0)
     val numberOfPayments = tenureYears * 12
     val monthlyRate = (interestRate / 100.0) / 12.0
     val monthlyPayment = if (monthlyRate <= 0.0) {
@@ -1478,7 +922,7 @@ private fun LeasePaymentCalculator(
                     color = MmColors.current.textPrimary,
                 )
                 Text(
-                    text = stringResource(R.string.mm_calc_lease_caption),
+                    text = stringResource(R.string.buyer_lease_example),
                     style = MmType.current.caption,
                     color = MmColors.current.textSecondary,
                 )
@@ -1514,14 +958,13 @@ private fun LeasePaymentCalculator(
                         activeTrackColor = MotormilaPrimary,
                         inactiveTrackColor = MotormilaSurfaceHighest,
                     ),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = depositLabel },
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text("60%", style = MaterialTheme.typography.labelSmall, color = MotormilaSecondaryText)
-                    Text(stringResource(R.string.ui_detail_40_cbsl_cap), style = MaterialTheme.typography.labelSmall, color = MotormilaSecondaryText)
                     Text("80%", style = MaterialTheme.typography.labelSmall, color = MotormilaSecondaryText)
                 }
             }
@@ -1547,7 +990,7 @@ private fun LeasePaymentCalculator(
                             color = MotormilaSurfaceHigh,
                             border = BorderStroke(1.dp, MotormilaOutline),
                             onClick = { interestRate = (interestRate - 0.5).coerceAtLeast(8.0) },
-                            modifier = Modifier.size(48.dp),
+                            modifier = Modifier.size(48.dp).semantics { contentDescription = lowerRate },
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Text("−", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = MotormilaOnSurface)
@@ -1564,7 +1007,7 @@ private fun LeasePaymentCalculator(
                             color = MotormilaSurfaceHigh,
                             border = BorderStroke(1.dp, MotormilaOutline),
                             onClick = { interestRate = (interestRate + 0.5).coerceAtMost(30.0) },
-                            modifier = Modifier.size(48.dp),
+                            modifier = Modifier.size(48.dp).semantics { contentDescription = raiseRate },
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Text("+", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = MotormilaOnSurface)
@@ -1702,317 +1145,6 @@ private fun LeasePaymentCalculator(
 }
 
 // ─────────────────────────────────────────────────────────────
-// 3. Import Duty and Tax Estimator (Indicative)
-// ─────────────────────────────────────────────────────────────
-
-private enum class ImportFuelClass(@androidx.annotation.StringRes val labelRes: Int) {
-    PETROL(R.string.calc_fuel_petrol),
-    DIESEL(R.string.calc_fuel_diesel),
-    HYBRID(R.string.calc_fuel_hybrid),
-    ELECTRIC(R.string.calc_fuel_electric);
-}
-
-@Composable
-private fun ImportDutyEstimator(
-    priceLkr: Double,
-    engineCc: Double,
-    initialFuel: String?,
-    modifier: Modifier = Modifier,
-) {
-    val detectedFuel = remember(initialFuel) {
-        val f = initialFuel?.lowercase() ?: ""
-        when {
-            f.contains("hybrid") || f.contains("phev") -> ImportFuelClass.HYBRID
-            f.contains("electric") || f == "ev" -> ImportFuelClass.ELECTRIC
-            f.contains("diesel") -> ImportFuelClass.DIESEL
-            else -> ImportFuelClass.PETROL
-        }
-    }
-
-    var selectedFuel by remember { mutableStateOf(detectedFuel) }
-    val baseCif = if (priceLkr > 0) priceLkr else 10_000_000.0
-    val cc = if (engineCc > 0) engineCc else 1500.0
-    val evKw = 110.0 // standard rating
-
-    // Post-2025 gazette import model calculations
-    val cid = baseCif * 0.30
-    val surcharge = cid * 0.50
-
-    val excise = when (selectedFuel) {
-        ImportFuelClass.PETROL -> {
-            val rate = when {
-                cc <= 1000 -> 3450.0
-                cc <= 1500 -> 4000.0
-                cc <= 1800 -> 5200.0
-                cc <= 2000 -> 6300.0
-                else -> 8050.0
-            }
-            cc * rate
-        }
-        ImportFuelClass.DIESEL -> {
-            val rate = when {
-                cc <= 1500 -> 4600.0
-                cc <= 2000 -> 6900.0
-                cc <= 2500 -> 8050.0
-                else -> 9200.0
-            }
-            cc * rate
-        }
-        ImportFuelClass.HYBRID -> {
-            val rate = when {
-                cc <= 1000 -> 2000.0
-                cc <= 1500 -> 2750.0
-                cc <= 1800 -> 4000.0
-                cc <= 2000 -> 5200.0
-                else -> 6900.0
-            }
-            cc * rate
-        }
-        ImportFuelClass.ELECTRIC -> {
-            val rate = when {
-                evKw <= 50 -> 25000.0
-                evKw <= 100 -> 37500.0
-                evKw <= 150 -> 50000.0
-                evKw <= 200 -> 65000.0
-                else -> 80000.0
-            }
-            evKw * rate
-        }
-    }
-
-    val (luxuryThreshold, luxuryRate) = when (selectedFuel) {
-        ImportFuelClass.PETROL -> 7_000_000.0 to 1.00
-        ImportFuelClass.DIESEL -> 7_000_000.0 to 1.00
-        ImportFuelClass.HYBRID -> 8_000_000.0 to 1.00
-        ImportFuelClass.ELECTRIC -> 12_000_000.0 to 0.60
-    }
-    val luxuryExcess = (baseCif - luxuryThreshold).coerceAtLeast(0.0)
-    val luxuryTax = luxuryExcess * luxuryRate
-
-    val ssclBase = baseCif + cid + surcharge + excise
-    val sscl = ssclBase * 0.025
-    val vatBase = ssclBase + sscl
-    val vat = vatBase * 0.18
-
-    val totalEstimatedTaxes = cid + surcharge + excise + luxuryTax + sscl + vat
-    val estimatedLandedCost = baseCif + totalEstimatedTaxes
-
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = MotormilaRadius.lg,
-        color = MotormilaSurfaceColor,
-        border = BorderStroke(1.dp, MotormilaOutline),
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            // Header + Indicative Pill
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.mm_calc_duty_title),
-                    style = MmType.current.overline,
-                    color = MmColors.current.textPrimary,
-                    modifier = Modifier.weight(1f),
-                )
-                Surface(
-                    shape = MotormilaRadius.pill,
-                    color = MotormilaPrimaryGlow,
-                    border = BorderStroke(1.dp, MotormilaPrimary.copy(alpha = 0.4f)),
-                ) {
-                    Text(
-                        text = stringResource(R.string.mm_calc_indicative),
-                        style = (MaterialTheme.typography.labelSmall).tabular(),
-                        fontWeight = FontWeight.Bold,
-                        color = MotormilaPrimaryBright,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                    )
-                }
-            }
-
-            // Fuel type selection filter pills
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                listOf(
-                    ImportFuelClass.PETROL,
-                    ImportFuelClass.DIESEL,
-                    ImportFuelClass.HYBRID,
-                    ImportFuelClass.ELECTRIC,
-                ).forEach { fuel ->
-                    val selected = selectedFuel == fuel
-                    Surface(
-                        shape = MotormilaRadius.lg,
-                        color = if (selected) MotormilaPrimary else MotormilaSurfaceHigh,
-                        border = BorderStroke(1.dp, if (selected) MotormilaPrimary else MotormilaOutline),
-                        onClick = { selectedFuel = fuel },
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 48.dp),
-                    ) {
-                        Box(
-                            modifier = Modifier.padding(vertical = 8.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = stringResource(fuel.labelRes),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                color = if (selected) MotormilaOnSurface else MotormilaSecondaryText,
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Tax breakdown rows
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(MotormilaRadius.lg)
-                    .background(MotormilaSurfaceHigh)
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                TaxBreakdownRow(stringResource(R.string.mm_tax_cif), LkrFormat.price(baseCif))
-                TaxBreakdownRow(stringResource(R.string.mm_tax_cid), LkrFormat.price(cid))
-                TaxBreakdownRow(stringResource(R.string.mm_tax_surcharge), LkrFormat.price(surcharge))
-                TaxBreakdownRow(
-                    stringResource(
-                        if (selectedFuel == ImportFuelClass.ELECTRIC) R.string.mm_tax_excise_kw else R.string.mm_tax_excise_cc,
-                    ),
-                    LkrFormat.price(excise)
-                )
-                TaxBreakdownRow(stringResource(R.string.mm_tax_sscl), LkrFormat.price(sscl))
-                TaxBreakdownRow(stringResource(R.string.mm_tax_vat), LkrFormat.price(vat))
-                if (luxuryTax > 0) {
-                    TaxBreakdownRow(stringResource(R.string.mm_tax_luxury), LkrFormat.price(luxuryTax))
-                }
-            }
-
-            // Total estimated taxes and Estimated Landed Cost in LKR millions
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                // Total Estimated Taxes
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MotormilaRadius.lg,
-                    color = MotormilaSurfaceHigh,
-                    border = BorderStroke(1.dp, MotormilaOutline),
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.mm_tax_total),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Medium,
-                            color = MotormilaSecondaryText,
-                        )
-                        Text(
-                            text = "+${LkrFormat.price(totalEstimatedTaxes)}",
-                            style = (MaterialTheme.typography.bodyMedium).tabular(),
-                            fontWeight = FontWeight.Bold,
-                            color = MotormilaPrimaryBright,
-                        )
-                    }
-                }
-
-                // Estimated Landed Cost
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MotormilaRadius.lg,
-                    color = MotormilaPrimaryGlow,
-                    border = BorderStroke(1.5.dp, MotormilaPrimary.copy(alpha = 0.5f)),
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column {
-                            Text(
-                                text = stringResource(R.string.mm_tax_landed),
-                                style = MmType.current.overline,
-                                color = MotormilaPrimaryBright,
-                            )
-                            Text(
-                                text = stringResource(R.string.mm_tax_landed_hint),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MotormilaSecondaryText,
-                            )
-                        }
-                        Text(
-                            text = LkrFormat.price(estimatedLandedCost),
-                            style = (MaterialTheme.typography.headlineMedium).tabular(),
-                            fontWeight = FontWeight.ExtraBold,
-                            color = MotormilaOnSurface,
-                        )
-                    }
-                }
-            }
-
-            // Alert card
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MotormilaRadius.lg,
-                color = MotormilaWarnContainer,
-                border = BorderStroke(1.dp, MotormilaWarn.copy(alpha = 0.35f)),
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.Top,
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Warning,
-                        contentDescription = null,
-                        tint = MotormilaWarn,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Text(
-                        text = stringResource(R.string.mm_tax_disclaimer),
-                        style = MaterialTheme.typography.labelSmall,
-                        lineHeight = 16.sp,
-                        color = MotormilaOnSurface.copy(alpha = 0.85f),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TaxBreakdownRow(label: String, amount: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MotormilaSecondaryText,
-        )
-        Text(
-            text = amount,
-            style = (MaterialTheme.typography.labelSmall).tabular(),
-            fontWeight = FontWeight.Medium,
-            color = MotormilaOnSurface,
-        )
-    }
-}
-
 @Composable
 private fun HistorySection(
     history: lk.motormila.app.domain.model.PriceHistory?,
@@ -2045,8 +1177,11 @@ private fun HistorySection(
                 Text(chartTitle, style = MmType.current.titleS, color = MmColors.current.textPrimary)
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    if (history == null) stringResource(R.string.mm_detail_history_loading)
-                    else stringResource(R.string.mm_detail_history_single),
+                    when {
+                        history == null && historyState == DetailLoadState.LOADING -> stringResource(R.string.mm_detail_history_loading)
+                        history == null || history.points.isEmpty() -> stringResource(R.string.buyer_no_recorded_asks)
+                        else -> stringResource(R.string.mm_detail_history_single)
+                    },
                     style = MmType.current.bodyS,
                     color = MmColors.current.textSecondary,
                 )
@@ -2114,7 +1249,6 @@ private fun HistorySection(
 private fun SellerCard(
     seller: SellerProfile?,
     sourceName: String,
-    onViewSource: () -> Unit,
     modifier: Modifier = Modifier,
     sellerState: DetailLoadState = DetailLoadState.LOADING,
     onRetrySeller: (() -> Unit)? = null,
@@ -2273,49 +1407,7 @@ private fun SellerCard(
                 style = MaterialTheme.typography.labelSmall,
                 color = MotormilaSecondaryText,
             )
-            MotormilaGhostButton(
-                label = stringResource(R.string.listing_view_on_source, sourceName),
-                leadingIcon = Icons.AutoMirrored.Filled.OpenInNew,
-                onClick = onViewSource,
-            )
         }
-    }
-}
-
-@Composable
-private fun DeepLinksRow(
-    onEstimate: () -> Unit,
-    onTax: () -> Unit,
-    onLease: () -> Unit,
-    onMap: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        MotormilaGhostButton(
-            label = stringResource(R.string.mm_deep_estimate),
-            fillMaxWidth = false,
-            // "Estimate" wrapped mid-word at equal weights on a 1080 px screen.
-            modifier = Modifier.weight(1.4f),
-            onClick = onEstimate,
-        )
-        MotormilaGhostButton(
-            label = stringResource(R.string.mm_deep_tax),
-            fillMaxWidth = false,
-            modifier = Modifier.weight(0.85f),
-            onClick = onTax,
-        )
-        MotormilaGhostButton(
-            label = stringResource(R.string.mm_deep_lease),
-            fillMaxWidth = false,
-            modifier = Modifier.weight(1f),
-            onClick = onLease,
-        )
-        MotormilaGhostButton(
-            label = stringResource(R.string.mm_deep_map),
-            fillMaxWidth = false,
-            modifier = Modifier.weight(0.85f),
-            onClick = onMap,
-        )
     }
 }
 
@@ -2347,12 +1439,26 @@ private fun openUrl(context: Context, url: String) {
     OutboundLinks.open(context, url)
 }
 
-private fun shareListing(context: Context, listing: Listing, verdict: lk.motormila.app.core.price.PriceVerdict?) {
-    // Single share entry: FMV bitmap card + EXTRA_TEXT listing URL.
-    // Web parity: singular /listing/{id} (App.tsx `/listing/:id`).
-    FmvShare.share(context, listing, verdict)
+private fun shareListing(context: Context, text: String) {
+    val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(android.content.Intent.EXTRA_TEXT, text)
+    }
+    try {
+        context.startActivity(android.content.Intent.createChooser(send, context.getString(R.string.share_listing_chooser)))
+    } catch (_: android.content.ActivityNotFoundException) {
+        OutboundLinks.copy(context, text)
+    }
 }
 
-private fun shareWhatsApp(context: Context, listing: Listing, verdict: lk.motormila.app.core.price.PriceVerdict?) {
-    FmvShare.shareWhatsApp(context, listing, verdict)
+@Composable
+private fun observationDate(raw: String?): String? {
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+    return remember(raw, locale) {
+        raw?.let { runCatching {
+            java.time.LocalDate.parse(it.take(10)).format(
+                java.time.format.DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.MEDIUM).withLocale(locale),
+            )
+        }.getOrNull() }
+    }
 }

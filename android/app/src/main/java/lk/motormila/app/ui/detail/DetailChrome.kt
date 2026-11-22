@@ -153,6 +153,7 @@ fun DetailTopChrome(
     onToggleSave: () -> Unit,
     onShare: () -> Unit,
     modifier: Modifier = Modifier,
+    showListingActions: Boolean = true,
 ) {
     val c = MmColors.current
     val env = LocalGlassEnv.current
@@ -232,24 +233,26 @@ fun DetailTopChrome(
                     )
                 }
             }
-            DetailGlassButton(
-                contentDescription = stringResource(if (saved) R.string.glass_unsave else R.string.glass_save),
-                onClick = onToggleSave,
-            ) {
-                MmSaveBurstIcon(
-                    saved = saved,
-                    tint = c.textPrimary,
-                    savedTint = c.brandText,
-                    burstColor = c.brand,
-                    iconSize = 20.dp,
-                )
-            }
-            Spacer(Modifier.width(6.dp))
-            DetailGlassButton(
-                contentDescription = stringResource(R.string.glass_share),
-                onClick = onShare,
-            ) {
-                Icon(Icons.Filled.Share, contentDescription = null, tint = c.textPrimary, modifier = Modifier.size(20.dp))
+            if (showListingActions) {
+                DetailGlassButton(
+                    contentDescription = stringResource(if (saved) R.string.glass_unsave else R.string.glass_save),
+                    onClick = onToggleSave,
+                ) {
+                    MmSaveBurstIcon(
+                        saved = saved,
+                        tint = c.textPrimary,
+                        savedTint = c.brandText,
+                        burstColor = c.brand,
+                        iconSize = 20.dp,
+                    )
+                }
+                Spacer(Modifier.width(6.dp))
+                DetailGlassButton(
+                    contentDescription = stringResource(R.string.glass_share),
+                    onClick = onShare,
+                ) {
+                    Icon(Icons.Filled.Share, contentDescription = null, tint = c.textPrimary, modifier = Modifier.size(20.dp))
+                }
             }
         }
     }
@@ -259,7 +262,7 @@ fun DetailTopChrome(
 private fun DetailGlassButton(
     contentDescription: String,
     onClick: () -> Unit,
-    size: Dp = 44.dp,
+    size: Dp = 48.dp,
     content: @Composable () -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }

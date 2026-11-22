@@ -1,24 +1,17 @@
 package lk.motormila.app.data.local.db
 
 import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
-/**
- * Every Room schema change MUST add a [Migration] here (release builds have
- * no destructive fallback: wiping a user's watchlist/alerts is not allowed).
- *
- * How to bump the schema:
- * 1. Change the entity, bump `version` in [MotormilaDatabase].
- * 2. Build once: Room KSP writes `app/schemas/lk.motormila.app.data.local.db.MotormilaDatabase/<N>.json`
- *    (configured via `ksp { arg("room.schemaLocation", ...) }`). Commit it.
- * 3. Add `val MIGRATION_<N-1>_<N> = object : Migration(N-1, N) { override fun migrate(db) { db.execSQL(...) } }`
- *    and append it to [ALL].
- * 4. Add a `MigrationTestHelper` test in src/androidTest (room-testing is already a dependency).
- *
- * Cache-only tables (listings, price_points, stats_cache, district_stats,
- * remote_keys) may be dropped/recreated inside a migration; watchlist and
- * alerts must be preserved.
- */
 object MotormilaMigrations {
-    /** Current schema is v1: no migrations yet. */
-    val ALL: Array<Migration> = emptyArray()
+    val MIGRATION_1_2 = object : Migration(1, 2) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            // v1 rows have no verifiable owner. Discard only this server mirror;
+            // keep the device-local watchlist and all other tables intact.
+            db.execSQL("DROP TABLE alerts")
+            db.execSQL("CREATE TABLE alerts (owner TEXT NOT NULL, id INTEGER NOT NULL, make TEXT, model TEXT, maxPriceLkr REAL, district TEXT, notifyPhone TEXT, notifyEmail TEXT, notifyTelegramChatId TEXT, notifyChannels TEXT, active INTEGER NOT NULL, createdAt TEXT, deliveryMode TEXT, quietHoursEnabled INTEGER, PRIMARY KEY(owner, id))")
+        }
+    }
+
+    val ALL: Array<Migration> = arrayOf(MIGRATION_1_2)
 }

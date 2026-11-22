@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="buyer_home_headline">අමතන්න කලින් මිල දැනගන්න.</string>
+    <string name="buyer_home_intro">ශ්‍රී ලංකාව පුරා විකුණුම්කරුවන් ඉල්ලන මිල ගණන් සසඳන්න. වාහනයක් හෝ ඔබට වැය කළ හැකි මුදල අනුව සොයන්න.</string>
+    <string name="buyer_home_search">වාහන සොයන්න</string>
+    <string name="buyer_home_saved">ඔබ සුරැකි වාහනය</string>
+    <string name="buyer_home_saved_drop">ඔබ සුරැකි වාහනයක මිල අඩු වී ඇත</string>
+    <string name="buyer_home_listing_id">දැන්වීම %1$d</string>
+    <string name="buyer_home_recorded_drop">වාර්තා වූ මිල අඩුවීමක්</string>
+    <string name="buyer_home_last_ask">අවසන් වරට වාර්තා වූ ඉල්ලුම් මිල</string>
+    <string name="buyer_home_previous_ask">කලින් ඉල්ලූ මිල: %1$s</string>
+    <string name="buyer_home_at_save">ඔබ සුරකින විට මිල: %1$s</string>
+    <string name="buyer_home_open_listing">දැන්වීම විවෘත කරන්න</string>
+    <string name="buyer_home_feed_error">මිල වෙනස්වීම් යාවත්කාලීන කළ නොහැකි විය.</string>
+    <string name="buyer_home_rupees">රු. %1$s</string>
+    <string name="buyer_home_after_cut">අඩු වූ පසු ඉල්ලූ මිල</string>
+    <string name="buyer_home_no_ask">ඉල්ලූ මිල වාර්තා වී නැත</string>
+</resources>

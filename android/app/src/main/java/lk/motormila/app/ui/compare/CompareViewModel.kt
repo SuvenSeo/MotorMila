@@ -8,8 +8,9 @@ import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,13 +20,15 @@ import lk.motormila.app.domain.model.Listing
 import lk.motormila.app.domain.repository.ListingRepository
 import lk.motormila.app.ui.navigation.Compare
 
+/** A tray slot survives a failed fetch; its ID remains visible and actionable. */
+data class CompareEntry(val id: Int, val listing: Listing? = null, val loading: Boolean = false)
+
 data class CompareUiState(
-    val ids: List<Int> = emptyList(),
-    val isLoading: Boolean = true,
-    val items: List<Listing> = emptyList(),
-    val error: String? = null,
+    val entries: List<CompareEntry> = emptyList(),
     val onlyDifferences: Boolean = false,
 ) {
+    val ids: List<Int> get() = entries.map { it.id }
+
     companion object {
         const val MAX_IDS = CompareLogic.MAX
     }
@@ -36,7 +39,7 @@ sealed interface CompareUiEvent {
     data class Remove(val id: Int) : CompareUiEvent
     data object ClearAll : CompareUiEvent
     data class OnlyDifferences(val on: Boolean) : CompareUiEvent
-    data object DismissError : CompareUiEvent
+    data class Retry(val id: Int) : CompareUiEvent
 }
 
 /**
@@ -65,64 +68,55 @@ class CompareViewModel @Inject constructor(
             ?: savedStateHandle.get<String>("ids")?.split(",")?.mapNotNull { it.toIntOrNull() }
             ?: emptyList()
 
-    private val _state = MutableStateFlow(CompareUiState(ids = CompareLogic.merge(tray.read(), navIds)))
+    private val _state = MutableStateFlow(CompareUiState())
+    private val loads = mutableMapOf<Int, Job>()
+    private var lastNavIds = navIds
     val state: StateFlow<CompareUiState> = _state.asStateFlow()
 
-    init {
-        tray.write(_state.value.ids)
-        load()
-    }
+    init { setIds(CompareLogic.merge(tray.read(), navIds)) }
 
-    /** Reconcile with a new nav arg while this VM is alive. */
     fun syncIds(ids: List<Int>) {
-        val merged = CompareLogic.merge(_state.value.ids, ids)
-        if (merged != _state.value.ids) {
-            setIds(merged)
-            load()
-        }
+        // Back from the picker (without selection) or Detail is not a new Add.
+        if (ids == lastNavIds) return
+        lastNavIds = ids
+        setIds(CompareLogic.merge(_state.value.ids, ids))
     }
 
     fun onEvent(event: CompareUiEvent) {
         when (event) {
-            CompareUiEvent.Refresh -> load()
-            is CompareUiEvent.Remove -> {
-                val ids = _state.value.ids - event.id
-                tray.write(ids)
-                _state.update { s -> s.copy(ids = ids, items = s.items.filter { it.id != event.id }) }
-            }
-            CompareUiEvent.ClearAll -> {
-                tray.write(emptyList())
-                _state.update { it.copy(ids = emptyList(), items = emptyList()) }
-            }
+            CompareUiEvent.Refresh -> _state.value.ids.forEach(::load)
+            is CompareUiEvent.Retry -> load(event.id)
+            is CompareUiEvent.Remove -> setIds(_state.value.ids - event.id)
+            CompareUiEvent.ClearAll -> setIds(emptyList())
             is CompareUiEvent.OnlyDifferences -> _state.update { it.copy(onlyDifferences = event.on) }
-            CompareUiEvent.DismissError -> _state.update { it.copy(error = null) }
         }
     }
 
     private fun setIds(ids: List<Int>) {
+        val previous = _state.value.entries.associateBy { it.id }
+        (previous.keys - ids.toSet()).forEach { loads.remove(it)?.cancel() }
         tray.write(ids)
-        _state.update { it.copy(ids = ids) }
+        _state.update { state -> state.copy(entries = ids.map { previous[it] ?: CompareEntry(it) }) }
+        ids.filterNot(previous::containsKey).forEach(::load)
     }
 
-    private fun load() {
-        val ids = _state.value.ids
-        if (ids.isEmpty()) {
-            _state.update { it.copy(isLoading = false, items = emptyList()) }
-            return
-        }
-        viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
-            // Load in parallel; a car that fails to load is dropped, not fatal.
-            val results = ids.map { id -> async { runCatching { repository.getDetail(id) } } }.awaitAll()
-            val items = results.mapNotNull { it.getOrNull() }
-            val firstError = results.firstOrNull { it.isFailure }?.exceptionOrNull()
-            _state.update {
-                it.copy(
-                    isLoading = false,
-                    items = items,
-                    error = if (items.isEmpty() && firstError != null) firstError.message ?: "Couldn't load comparison." else null,
-                )
+    private fun load(id: Int) {
+        if (id !in _state.value.ids || loads[id]?.isActive == true) return
+        updateEntry(id) { it.copy(loading = true) }
+        loads[id] = viewModelScope.launch {
+            val listing = try {
+                repository.getDetail(id).takeIf { it.id == id }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                null // Missing in a snapshot or a network failure is not proof the ad is gone.
             }
+            ensureActive()
+            updateEntry(id) { CompareEntry(id, listing) }
         }
+    }
+
+    private fun updateEntry(id: Int, change: (CompareEntry) -> CompareEntry) {
+        _state.update { state -> state.copy(entries = state.entries.map { if (it.id == id) change(it) else it }) }
     }
 }
