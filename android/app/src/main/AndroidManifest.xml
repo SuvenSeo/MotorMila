@@ -236,6 +236,12 @@
                 tools:node="remove" />
         </provider>
 
+            <!-- Disable SentryInitProvider auto-init: MotormilaApp initializes Sentry
+             manually only when a DSN is configured (fixes 1.9.0/1.9.1 launch crash). -->
+        <meta-data
+            android:name="io.sentry.auto-init"
+            android:value="false" />
+
     </application>
 
 </manifest>

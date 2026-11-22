@@ -98,11 +98,11 @@ fun FmvGauge(
     )
     val c = MmColors.current
     val track = c.surfaceHigh
-    val good = c.dealGood
+    val good = if (verdict.verifyFirst) c.caution else c.dealGood
     val fair = c.dealFair
     val high = c.dealHigh
-    // Needle follows the text colour so it reads on light and dark cards.
-    val needle = c.textPrimary
+    // Needle uses caution amber when verify-first is active so it never contradicts the amber badge.
+    val needle = if (verdict.verifyFirst) c.caution else c.textPrimary
     val hub = c.surface
     val gaugePress = remember { MutableInteractionSource() }
     val headline = verdict.headline()

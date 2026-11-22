@@ -192,7 +192,7 @@ fun MakeCombobox(
                         },
                     )
                 }
-                items(filtered, key = { it }) { make ->
+                items(filtered.distinct(), key = { it }) { make ->
                     ComboboxRow(
                         label = make,
                         selected = selected.equals(make, ignoreCase = true),

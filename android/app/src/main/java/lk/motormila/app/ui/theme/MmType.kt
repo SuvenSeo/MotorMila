@@ -181,9 +181,11 @@ private fun style(
  */
 @Immutable
 data class MmType(
+    val displayXL: TextStyle,
     val displayL: TextStyle,
     val displayM: TextStyle,
     val titleL: TextStyle,
+    val title2: TextStyle,
     val titleM: TextStyle,
     val titleS: TextStyle,
     val bodyL: TextStyle,
@@ -193,6 +195,7 @@ data class MmType(
     val labelS: TextStyle,
     val caption: TextStyle,
     val overline: TextStyle,
+    val priceHero: TextStyle,
     val priceL: TextStyle,
     val priceM: TextStyle,
     val priceS: TextStyle,
@@ -208,9 +211,11 @@ data class MmType(
          * where line heights scale with the sp size).
          */
         fun build(body: FontFamily = CalSansText, display: FontFamily = CalSans) = MmType(
-            displayL = style(display, FontWeight.Bold, 40, 46, -0.4),
+            displayXL = style(display, FontWeight.Bold, 44, 46, -0.8),
+            displayL = style(display, FontWeight.Bold, 40, 44, -0.5),
             displayM = style(display, FontWeight.Bold, 32, 38, -0.3),
-            titleL = style(display, FontWeight.SemiBold, 26, 32, -0.15),
+            titleL = style(display, FontWeight.SemiBold, 26, 32, -0.2),
+            title2 = style(display, FontWeight.SemiBold, 24, 28, -0.2),
             titleM = style(body, FontWeight.SemiBold, 20, 26, -0.2),
             titleS = style(body, FontWeight.SemiBold, 17, 22, -0.1),
             bodyL = style(body, FontWeight.Normal, 16, 24, 0.0),
@@ -220,6 +225,7 @@ data class MmType(
             labelS = style(body, FontWeight.SemiBold, 12, 16, 0.1),
             caption = style(body, FontWeight.Medium, 12, 16, 0.1),
             overline = style(body, FontWeight.SemiBold, 11, 14, 0.9),
+            priceHero = style(display, FontWeight.Bold, 40, 44, -0.5, "tnum"),
             priceL = style(display, FontWeight.Bold, 30, 36, -0.2, "tnum"),
             priceM = style(body, FontWeight.Bold, 20, 24, -0.2, "tnum"),
             priceS = style(body, FontWeight.SemiBold, 16, 20, -0.1, "tnum"),

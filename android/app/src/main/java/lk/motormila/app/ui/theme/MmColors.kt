@@ -61,6 +61,13 @@ data class MmColors(
     // Status
     val success: Color,
     val danger: Color,
+    // Showroom stage-ink band (#05060B, dark in both themes — matches web hero & detail stage)
+    val stage: Color = Color(0xFF05060B),
+    val stageRaised: Color = Color(0xFF10131D),
+    val onStage: Color = Color(0xFFF8F5F2),
+    val onStageMuted: Color = Color(0xFFA8A29E),
+    val stageOutline: Color = Color(0x24F8F5F2),
+    val stageAccent: Color = Color(0xFF5CA5FF),
     // Skeleton
     val skeletonBase: Color,
     val skeletonHighlight: Color,

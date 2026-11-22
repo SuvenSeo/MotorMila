@@ -262,9 +262,12 @@ private fun CameraPreview(
     val lifecycle = LocalLifecycleOwner.current
     val executor = remember { Executors.newSingleThreadExecutor() }
     val recogniser = remember { TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS) }
+    val boundProvider = remember { arrayOfNulls<ProcessCameraProvider>(1) }
 
     DisposableEffect(Unit) {
         onDispose {
+            runCatching { boundProvider[0]?.unbindAll() }
+            boundProvider[0] = null
             runCatching { recogniser.close() }
             runCatching { executor.shutdown() }
         }
@@ -277,6 +280,7 @@ private fun CameraPreview(
                 providerFuture.addListener({
                     runCatching {
                         val provider = providerFuture.get()
+                        boundProvider[0] = provider
                         val previewUse = androidx.camera.core.Preview.Builder().build().also {
                             it.surfaceProvider = preview.surfaceProvider
                         }

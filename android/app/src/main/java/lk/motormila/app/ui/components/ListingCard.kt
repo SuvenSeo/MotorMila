@@ -237,7 +237,7 @@ fun ListingCard(
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(4f / 3f)
+                    .aspectRatio(16f / 10f)
                     .then(
                         if (onCompareFly != null) {
                             Modifier.onGloballyPositioned { photoBounds[0] = it.boundsInRoot() }
@@ -248,38 +248,6 @@ fun ListingCard(
                     .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                     .then(heroShared),
             )
-            if (showDeal) {
-                if (verdictLabel != null) {
-                    MmDealBadge(
-                        label = if (verdict.kind == MmDealVerdict.Kind.LEASE) stringResource(R.string.mm_lease_short) else verdictLabel,
-                        tone = verdict.tone,
-                        onImage = true,
-                        onWhy = onWhy,
-                        // End inset keeps the pill clear of the 48dp save button
-                        // (Cal Sans Text sets ~15% wider than the old face).
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(start = 10.dp, top = 10.dp, end = 52.dp)
-                            // Without a Why action the badge is decorative: the card's
-                            // composed description already carries the verdict.
-                            .then(if (onWhy == null) Modifier.clearAndSetSemantics { } else Modifier),
-                    )
-                } else if (lockedBadge) {
-                    // Pro lock only for non-Pro users (free rows carry no score);
-                    // a Pro user's unrated ad simply has no badge.
-                    MmDealBadge(
-                        band = DealBand.LOCKED,
-                        onImage = true,
-                        onWhy = onWhy,
-                        // End inset keeps the pill clear of the 48dp save button
-                        // (Cal Sans Text sets ~15% wider than the old face).
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(start = 10.dp, top = 10.dp, end = 52.dp)
-                            .then(if (onWhy == null) Modifier.clearAndSetSemantics { } else Modifier),
-                    )
-                }
-            }
             SaveButton(
                 saved = isWatched,
                 reduced = reduced,
@@ -309,8 +277,7 @@ fun ListingCard(
                 text = listing.displayName,
                 style = t.label.copy(fontSize = 15.sp, lineHeight = 20.sp),
                 color = c.textPrimary,
-                // Two lines at every font scale: narrow 152dp cells clipped
-                // names to ~6 chars ("Merced…") when limited to one line.
+                minLines = 2,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.then(titleShared),
@@ -326,6 +293,29 @@ fun ListingCard(
                 // "Rs 1.85 Mn" needs ~0.45x (was floored at 0.55 -> "Rs 1.85 …").
                 minScale = 0.3f,
             )
+            // Deal verdict sits cleanly under the price (web parity), keeping photography uncluttered.
+            if (showDeal) {
+                if (verdictLabel != null) {
+                    Spacer(Modifier.height(6.dp))
+                    MmDealBadge(
+                        label = if (verdict.kind == MmDealVerdict.Kind.LEASE) stringResource(R.string.mm_lease_short) else verdictLabel,
+                        tone = verdict.tone,
+                        onImage = false,
+                        onWhy = onWhy,
+                        modifier = Modifier
+                            .then(if (onWhy == null) Modifier.clearAndSetSemantics { } else Modifier),
+                    )
+                } else if (lockedBadge) {
+                    Spacer(Modifier.height(6.dp))
+                    MmDealBadge(
+                        band = DealBand.LOCKED,
+                        onImage = false,
+                        onWhy = onWhy,
+                        modifier = Modifier
+                            .then(if (onWhy == null) Modifier.clearAndSetSemantics { } else Modifier),
+                    )
+                }
+            }
             // Evidence layer (web parity): the typical-price anchor the verdict
             // argues from, plus a thin market-position bar. Quiet, not a shout.
             if (typicalText != null) {
@@ -520,9 +510,9 @@ private fun DeltaChip(deltaPct: Double) {
 @Composable
 private fun metaLine(l: Listing): String {
     val parts = mutableListOf<String>()
+    l.year?.let { parts += it.toString() }
     listOfNotNull(l.district?.takeIf { it.isNotBlank() }, l.city?.takeIf { it.isNotBlank() })
         .joinToString(", ").takeIf { it.isNotBlank() }?.let { parts += it }
-    l.year?.let { parts += it.toString() }
     l.mileageKm?.let { if (it > 0) parts += LkrFormat.km(it) }
     l.fuelType?.let { if (it.isNotBlank()) parts += it.replaceFirstChar(Char::uppercase) }
     l.transmission?.let { if (it.isNotBlank()) parts += it.replaceFirstChar(Char::uppercase) }

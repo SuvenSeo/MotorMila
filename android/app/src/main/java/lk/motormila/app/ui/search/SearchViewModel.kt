@@ -162,7 +162,7 @@ class SearchViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 _state.value = _state.value.copy(
-                    makes = listings.makes(),
+                    makes = listings.makes().filter { it.isNotBlank() }.distinct(),
                 )
             } catch (_: Exception) {
             }

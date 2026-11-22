@@ -154,9 +154,14 @@ fun HomeMarketStrip(
     avgPriceLkr: Double?,
     modifier: Modifier = Modifier,
 ) {
-    val c = MmColors.current
-    MmCard(modifier = modifier.fillMaxWidth().padding(horizontal = MmSpacing.gutter), contentPadding = PaddingValues(vertical = 16.dp)) {
-        Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min)) {
+    MmCard(
+        modifier = modifier.fillMaxWidth().padding(horizontal = MmSpacing.gutter),
+        contentPadding = PaddingValues(vertical = 16.dp, horizontal = 4.dp),
+    ) {
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Stat(LkrFormat.count(totalListings), stringResource(R.string.mm_stat_listed), Modifier.weight(1f))
             Divider()
             Stat(if (new24h > 0) LkrFormat.count(new24h) else "—", stringResource(R.string.mm_stat_new24h), Modifier.weight(1f))
@@ -168,26 +173,32 @@ fun HomeMarketStrip(
 
 @Composable
 private fun Divider() {
-    Box(Modifier.width(1.dp).fillMaxHeight().padding(vertical = 4.dp).background(MmColors.current.outline))
+    Box(Modifier.width(1.dp).height(34.dp).background(MmColors.current.outline))
 }
 
 @Composable
 private fun Stat(value: String, label: String, modifier: Modifier) {
     val c = MmColors.current
-    // Three numbers share one row: cap the font scale so 200% never clips
-    // "90,624" to "90,62"; labels wrap to two lines instead of ellipsising.
-    lk.motormila.app.ui.theme.CappedFontScale(max = 1.3f) {
-        Column(modifier.padding(horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            // Capped 1.3x still clipped "1,248,2" / "Rs 125 M" on 360 dp: scale to fit.
-            Text(value, style = MmType.current.priceM, color = c.textPrimary, maxLines = 1, softWrap = false, modifier = Modifier.fitWidth())
-            Spacer(Modifier.height(2.dp))
+    // Uppercase eyebrow ABOVE bold tabular number (web showroom rhythm).
+    // Fixed-height divider avoids IntrinsicSize.Min clipping labels under fitWidth().
+    lk.motormila.app.ui.theme.CappedFontScale(max = 1.25f) {
+        Column(modifier.padding(horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                label,
-                style = MmType.current.caption,
+                label.uppercase(),
+                style = MmType.current.overline,
                 color = c.textTertiary,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                value,
+                style = MmType.current.priceM,
+                color = c.textPrimary,
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.fitWidth(),
             )
         }
     }
