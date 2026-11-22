@@ -1,9 +1,25 @@
-/* Motormila's treatment of the poster. The reusable tear keeps its own stage. */
+/* Motormila's treatment of the poster. The reusable tear keeps its own stage.
+
+   Both themes are first-class. Light is a printed sheet in daylight: a pale
+   blue stock over warm plaster, with a steel pulp edge where it tears. Dark is
+   the night showroom: a deep steel sheet over warm asphalt, with a bright
+   fibre rim. Ink and paper come from the page tokens, so only the sheet stocks
+   are declared here. */
 .tpf.tpf-motormila {
+  color-scheme: light;
+  --mm-poster-sheet: hsl(212 44% 91%);
+  --mm-poster-fibre: hsl(212 20% 60%);
+  --mm-grain-paper: 0.05;
+  --mm-grain-sheet: 0.09;
+  --fs: clamp(0.875rem, 1.85cqmin, 1.0625rem);
+}
+
+.theme-dark .tpf.tpf-motormila {
   color-scheme: dark;
   --mm-poster-sheet: hsl(218 48% 13%);
   --mm-poster-fibre: hsl(217 25% 50%);
-  --fs: clamp(0.875rem, 1.85cqmin, 1.0625rem);
+  --mm-grain-paper: 0.12;
+  --mm-grain-sheet: 0.2;
 }
 
 /* Steel-toned paper fibres keep the tear visible without a white edge. */
@@ -23,8 +39,8 @@
   stop-color: var(--mm-poster-fibre);
 }
 
-.tpf-motormila .tpf-paper-grain { opacity: 0.12; }
-.tpf-motormila .tpf-sheet-grain { opacity: 0.2; }
+.tpf-motormila .tpf-paper-grain { opacity: var(--mm-grain-paper); }
+.tpf-motormila .tpf-sheet-grain { opacity: var(--mm-grain-sheet); }
 
 .tpf-motormila .tpf-top {
   margin-inline: auto;

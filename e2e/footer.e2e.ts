@@ -15,6 +15,17 @@ test("the poster footer carries the site on every route", async ({ page }) => {
   await expect(poster(page).getByRole("button", { name: "Pull the pin" })).toBeVisible();
 });
 
+test("the poster prints in light mode on a light page", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("motormila_theme_mode", "light"));
+  await page.goto("/");
+  const footer = poster(page);
+  await expect(page.locator("html")).toHaveClass(/theme-light/);
+  await expect(footer).toHaveCSS("color-scheme", "light");
+  await expect(footer.getByRole("link", { name: "Motormila", exact: true }).locator("img"))
+    .toHaveAttribute("src", "/logo-wordmark-light.svg");
+  await expect(footer.getByRole("link", { name: "Privacy", exact: true })).toBeVisible();
+});
+
 test("the pin tears the sheet and the poster navigates inside the app", async ({ page }) => {
   await page.goto("/");
   const footer = poster(page);

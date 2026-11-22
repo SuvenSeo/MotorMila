@@ -11,12 +11,20 @@ function FooterRouterLink({ href, ...props }: FooterAnchorProps) {
 
 /** The site footer: Motormila's take on the pushpin tear-off poster. */
 export default function MotormilaTearFooter() {
-  const { t } = useAppPreferences();
+  const { t, resolvedTheme } = useAppPreferences();
 
   return (
     <PushpinTearFooter
-      className="tpf-motormila theme-dark"
-      brand={<img src={BRAND.logo.wordmarkDarkTheme} alt="" width={1016} height={170} draggable={false} />}
+      className="tpf-motormila"
+      brand={
+        <img
+          src={resolvedTheme === "dark" ? BRAND.logo.wordmarkDarkTheme : BRAND.logo.wordmarkLightTheme}
+          alt=""
+          width={1016}
+          height={170}
+          draggable={false}
+        />
+      }
       name={BRAND.name}
       paperCaption={t("footer.tagline", "Market Intelligence")}
       logo={
