@@ -4,6 +4,7 @@ import androidx.paging.ExperimentalPagingApi
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
+import androidx.paging.filter
 import androidx.paging.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -65,7 +66,10 @@ class ListingRepositoryImpl @Inject constructor(
                     },
                     onSourceChanged = { fromSnapshot -> _pagingFromSnapshot.value = fromSnapshot },
                 )
-            }.flow
+            }.flow.map { paging ->
+                val seen = HashSet<Int>()
+                paging.filter { seen.add(it.id) }
+            }
         } else {
             @OptIn(ExperimentalPagingApi::class)
             Pager(

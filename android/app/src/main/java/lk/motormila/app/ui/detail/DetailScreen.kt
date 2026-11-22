@@ -87,6 +87,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
@@ -357,26 +358,20 @@ fun ListingDetailScreen(
                             )
                         }
                         item {
-                            val verdict = remember(priceVerdict, isLease, state.isPro, state.fmv) {
+                            val uiVerdict = remember(priceVerdict, isLease, state.isPro, state.fmv) {
                                 MmDealVerdict.from(
                                     priceVerdict ?: listing.rowVerdict(),
                                     isLeaseTakeover = isLease,
-                                    // Free rows carry no score; a loaded FMV verdict is shown to everyone.
                                     ratingAllowed = state.isPro || state.fmv != null,
                                 )
                             }
-                            DealVerdictRow(
-                                verdict = verdict,
-                                onWhy = { showWhy = true },
-                                modifier = Modifier.padding(horizontal = MmSpacing.gutter),
-                            )
-                        }
-                        item {
                             PriceDealSection(
                                 listing = listing,
                                 isPro = state.isPro,
                                 history = state.history,
                                 verdict = priceVerdict,
+                                uiVerdict = uiVerdict,
+                                onWhy = { showWhy = true },
                                 onDealShown = {
                                     val ok = priceVerdict as? lk.motormila.app.core.price.PriceVerdict.Ok
                                     if (ok != null && ok.band == lk.motormila.app.core.price.VerdictBand.BELOW && !ok.verifyFirst) {
@@ -743,22 +738,38 @@ internal fun PriceDealSection(
     history: PriceHistory? = null,
     /** The screen's one resolved verdict; null = the row's own (previews). */
     verdict: lk.motormila.app.core.price.PriceVerdict? = null,
+    uiVerdict: MmDealVerdict? = null,
+    onWhy: (() -> Unit)? = null,
 ) {
+    val c = MmColors.current
+    val t = MmType.current
     val resolved = verdict ?: remember(listing) { listing.rowVerdict() }
     val ok = resolved as? lk.motormila.app.core.price.PriceVerdict.Ok
     LaunchedEffect(listing.id) { onDealShown() }
-    // The card container key (listingCardKey) lives ONLY on the Detail root
-    // (detailContainerTransform). A second sharedBounds with the same key here
-    // made Compose pair the root against this section: the whole page was
-    // ScaleToBounds-squeezed into this band and stayed there after settling.
     val sharedScope = LocalSharedTransitionScope.current
     val animatedScope = LocalNavAnimatedVisibilityScope.current
+    val eyebrow = listOfNotNull(
+        listing.make?.takeIf { it.isNotBlank() }?.uppercase(),
+        listing.year?.toString(),
+        listing.district?.takeIf { it.isNotBlank() }?.uppercase(),
+    ).joinToString(" · ")
+
+    // Full-bleed Showroom stage-ink band (#05060B in both themes, matching web ListingDetail).
     Column(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = MmSpacing.gutter),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .background(c.stage)
+            .padding(horizontal = MmSpacing.gutter, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        if (eyebrow.isNotBlank()) {
+            Text(
+                text = eyebrow,
+                style = t.overline,
+                color = c.stageAccent,
+                maxLines = 1,
+            )
+        }
         val titleShared = if (sharedScope != null && animatedScope != null) {
             with(sharedScope) {
                 Modifier.sharedBounds(
@@ -772,33 +783,28 @@ internal fun PriceDealSection(
         }
         Text(
             listing.displayName,
-            style = MmType.current.titleM,
-            color = MmColors.current.textPrimary,
+            style = t.titleL,
+            color = c.onStage,
             modifier = titleShared,
         )
+        Box(Modifier.fillMaxWidth().height(1.dp).background(c.stageOutline))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // Price hero: the ONE full-rupee figure on the page (the sticky bar
-            // is compact-only). "Asking price" eyebrow + 30sp tabular price that
-            // shrinks to fit instead of clipping at 200 % font scale.
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    stringResource(R.string.mm_detail_asking),
-                    style = MmType.current.overline,
-                    color = MmColors.current.textSecondary,
+                    stringResource(R.string.mm_detail_asking).uppercase(),
+                    style = t.overline,
+                    color = c.onStageMuted,
                 )
                 PriceSlot(
                     listing = listing,
                     history = history,
+                    priceColor = c.onStage,
                 )
             }
-            // Free tier already shows the PRO badge + locked "Deal score" row below;
-            // an empty ring with a dash next to the price read as a broken widget.
             if (isPro && ok != null) {
-                // Signed percent vs the typical asking price — the same number as the
-                // badge and gauge ("−12%" / "+6%"), never a bare score.
                 val sign = if (ok.gapPct < 0) "\u2212" else "+"
                 DealRing(
                     score = ok.dealScore,
@@ -808,28 +814,12 @@ internal fun PriceDealSection(
                 )
             }
         }
-        if (isPro) {
-            // Same verdict as the deal row / gauge. Withheld: no badge here —
-            // the price card below says why (never a Pro lock for a Pro user).
-            if (ok != null) DealBadge(band = ok.band.toDealBand(), score = ok.dealScore, pct = ok.pct)
-        } else if (ok != null) {
-            // Free tier: backend nulls deal_score — LOCKED badge + blurred value
-            // gatekept behind UserSession.isPro (DOMAIN_CONTRACT §5). Only when
-            // this listing has a rating to unlock: a Pro lock over a withheld
-            // verdict promises a score that doesn't exist.
-            DealBadge(band = DealBand.LOCKED, score = null)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    stringResource(R.string.mm_deal_score_label),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.width(8.dp))
-                LockedValue(placeholder = "8.4")
-            }
+        if (uiVerdict != null && onWhy != null) {
+            DealVerdictRow(
+                verdict = uiVerdict,
+                onWhy = onWhy,
+            )
         }
-        // Intelligence Pills removed (audit P1-A): sell-speed / ad-health /
-        // "typical mileage" were fabricated metrics with no data behind them.
     }
 }
 
@@ -844,6 +834,7 @@ private fun PriceSlot(
     listing: Listing,
     history: PriceHistory?,
     modifier: Modifier = Modifier,
+    priceColor: Color = MmColors.current.textPrimary,
 ) {
     // The shared key lives on this container so the card → detail (and back)
     // morph keeps working whether the static price or the ticker is showing —
@@ -865,7 +856,7 @@ private fun PriceSlot(
     // Hero price: 30sp display-tier tabular figures (MmType.priceL), the one
     // full-rupee figure on the page. MmFitText / fit styles below keep it whole
     // at 200 % font scale.
-    val priceStyle = MmType.current.priceL.copy(color = MmColors.current.textPrimary)
+    val priceStyle = MmType.current.priceHero.copy(color = priceColor)
     val drop = remember(listing.id, history) { detectPriceDrop(listing.id, history) }
     // Shared bounds hug the price text (not the weight(1f) slot): matched
     // against the slot's full row width, the card's short "Rs 1.4 Mn" was
@@ -886,7 +877,7 @@ private fun PriceSlot(
                     lk.motormila.app.ui.components.MmFitText(
                         text = LkrFormat.priceFull(listing.priceLkr),
                         style = priceStyle,
-                        color = MotormilaOnSurface,
+                        color = priceColor,
                         minScale = 0.5f,
                     )
                 }
@@ -1245,7 +1236,9 @@ internal fun BentoSpecsGrid(listing: Listing, modifier: Modifier = Modifier) {
         BentoSpecItem(stringResource(R.string.mm_spec_fuel), fuelVal, Icons.Filled.LocalGasStation),
         BentoSpecItem(stringResource(R.string.mm_spec_condition), condVal, Icons.Filled.AutoAwesome),
         BentoSpecItem(stringResource(R.string.mm_spec_body), bodyVal, Icons.Filled.DirectionsCar),
-    )
+    ).filter { it.value != unknown }
+
+    if (specs.isEmpty()) return
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -1257,26 +1250,18 @@ internal fun BentoSpecsGrid(listing: Listing, modifier: Modifier = Modifier) {
             color = MmColors.current.textSecondary,
             modifier = Modifier.padding(bottom = 2.dp),
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            BentoCell(item = specs[0], modifier = Modifier.weight(1f))
-            BentoCell(item = specs[1], modifier = Modifier.weight(1f))
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            BentoCell(item = specs[2], modifier = Modifier.weight(1f))
-            BentoCell(item = specs[3], modifier = Modifier.weight(1f))
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            BentoCell(item = specs[4], modifier = Modifier.weight(1f))
-            BentoCell(item = specs[5], modifier = Modifier.weight(1f))
+        specs.chunked(2).forEach { pair ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                BentoCell(item = pair[0], modifier = Modifier.weight(1f))
+                if (pair.size > 1) {
+                    BentoCell(item = pair[1], modifier = Modifier.weight(1f))
+                } else {
+                    Spacer(Modifier.weight(1f))
+                }
+            }
         }
     }
 }

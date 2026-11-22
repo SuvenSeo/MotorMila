@@ -113,10 +113,14 @@ fun HomeContent(
     val homeBackdrop = androidx.compose.runtime.remember { dev.chrisbanes.haze.HazeState() }
     val statusTop = androidx.compose.foundation.layout.WindowInsets.statusBars
         .asPaddingValues().calculateTopPadding()
-    // Re-tapping the active Buy tab scrolls Home back to the top.
+    // Re-tapping the active Buy tab scrolls Home back to the top without firing on fresh composition.
     val reselectTick = LocalTabReselect.current.tickFor(MotormilaTabs.BUY)
+    val lastHandledTick = androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableIntStateOf(reselectTick) }
     LaunchedEffect(reselectTick) {
-        if (reselectTick > 0) listState.animateScrollToItem(0)
+        if (reselectTick > lastHandledTick.intValue) {
+            lastHandledTick.intValue = reselectTick
+            listState.animateScrollToItem(0)
+        }
     }
     androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
     MmPullToRefresh(
@@ -208,21 +212,9 @@ fun HomeContent(
                 }
             }
 
-            // 5. Shortcuts: four primary + "More" overflow
-            item {
-                HomeShortcutGrid(
-                    onBestPicksClick = onBestPicksClick,
-                    onPriceIndexClick = onPriceIndexClick,
-                    onCalculatorClick = onCalculatorClick,
-                    onEvHubClick = onEvHubClick,
-                    onPulseClick = onPulseClick,
-                    onPermitsClick = onPermitsClick,
-                )
-            }
-
-            // 6. Best priced (real hot deals only). The featured deal above
-            // is hotDeals[0], so drop it here: the same listing must not
-            // register its shared-element keys twice (featured + rail).
+            // 5. Best priced (real hot deals — inventory before tools, web parity).
+            // The featured deal above is hotDeals[0], so drop it here to keep
+            // shared-element keys unique.
             val railDeals = state.insights.hotDeals.drop(1).take(10)
             if (railDeals.isNotEmpty()) {
                 item {
@@ -233,7 +225,7 @@ fun HomeContent(
                 }
             }
 
-            // 7. Price drops
+            // 6. Price drops
             if (state.priceDrops.isNotEmpty()) {
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(MmSpacing.sm)) {
@@ -241,6 +233,18 @@ fun HomeContent(
                         HomeDropRail(state.priceDrops.take(10), onClick = onListingClick)
                     }
                 }
+            }
+
+            // 7. Shortcuts: four primary + "More" overflow
+            item {
+                HomeShortcutGrid(
+                    onBestPicksClick = onBestPicksClick,
+                    onPriceIndexClick = onPriceIndexClick,
+                    onCalculatorClick = onCalculatorClick,
+                    onEvHubClick = onEvHubClick,
+                    onPulseClick = onPulseClick,
+                    onPermitsClick = onPermitsClick,
+                )
             }
 
             // 8. Most listed models
