@@ -445,8 +445,12 @@ export function RouteMeta() {
       },
     };
 
-    let meta: Meta | undefined = routeMeta[pathname];
-    let canonicalPath = pathname;
+    // The Pro desk keeps its mode in the path (/pro/lanes); it is one page with
+    // one title, so every mode resolves to the /pro entry.
+    const proModePath = /^\/pro\/[a-z-]+\/?$/.test(pathname);
+    const metaPath = proModePath ? "/pro" : pathname;
+    let meta: Meta | undefined = routeMeta[metaPath];
+    let canonicalPath = proModePath ? "/pro" : pathname;
     const ogImage = `${ORIGIN}/og-card.jpg`;
     let jsonLd: unknown | undefined;
 
@@ -604,7 +608,7 @@ export function RouteMeta() {
           : { title: SITE, description: defaultDescription });
     }
 
-    const unknownRoute = !isKnownRoutePath(pathname);
+    const unknownRoute = !isKnownRoutePath(metaPath);
     if (unknownRoute) {
       meta = {
         title: t("seo.notFoundTitle", "Page not found — {site}", siteVars),

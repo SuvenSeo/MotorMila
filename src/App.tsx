@@ -216,6 +216,16 @@ const App = () => {
     };
   }, []);
 
+  // One element for both Pro paths: the desk keeps its mode in the URL
+  // (/pro, /pro/lanes) but reads it from params, so the tree never remounts.
+  const proDeskRoute = (
+    <RouteErrorBoundary>
+      <Suspense fallback={<MinimalLoader />}>
+        <RequireAuth><ProtectedRoute><ProDashboard /></ProtectedRoute></RequireAuth>
+      </Suspense>
+    </RouteErrorBoundary>
+  );
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -382,13 +392,8 @@ const App = () => {
                 </Route>
                 {/** Legacy path kept as a bare redirect so old bookmarks still land. */}
                 <Route path="/admin" element={<Navigate to="/motormila/admin" replace />} />
-                <Route path="/pro" element={
-                  <RouteErrorBoundary>
-                    <Suspense fallback={<MinimalLoader />}>
-                      <RequireAuth><ProtectedRoute><ProDashboard /></ProtectedRoute></RequireAuth>
-                    </Suspense>
-                  </RouteErrorBoundary>
-                } />
+                <Route path="/pro" element={proDeskRoute} />
+                <Route path="/pro/:mode" element={proDeskRoute} />
               </Routes>
               </CompareProvider>
             </HistoryRouter>

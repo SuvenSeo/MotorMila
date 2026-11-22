@@ -29,6 +29,8 @@ const NOINDEX_PREFIXES = [
 const KNOWN_ROUTE_PATTERNS: RegExp[] = [
   /^\/$/,
   /^\/(trends|estimate|calculator|ev-hub|ev-chargers|best-picks|sell|price-index|docs|pricing|privacy|terms|compare|valuation|permits|mobile-app|dealer|settings|alerts|profile|sign-in|sign-up|verify-email|forgot-password|reset-password|hero-lab|admin|pro|pro-preview|official-pulse|afford|safe-transfer|finance|leasing|inspection|insurance|cookies|removal|delete-account|how-we-price|bot)\/?$/,
+  // The Pro desk carries its mode in the path: /pro, /pro/lanes, /pro/sources…
+  /^\/pro(\/[a-z-]+)?\/?$/,
   /^\/checkout\/return\/?$/,
   /^\/listing\/[^/]+\/?$/,
   /^\/cars\/[^/]+(\/[^/]+(\/\d{4})?)?\/?$/,

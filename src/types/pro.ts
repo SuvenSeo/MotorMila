@@ -71,6 +71,12 @@ export interface ProVehicleLane {
   top_district?: string | null;
   top_source?: string | null;
   latest_seen_at?: string | null;
+  /** Trailing six monthly medians, oldest first. Present once the link is on the extended Pro API. */
+  spark_6m?: ProLaneSparkPoint[];
+  /** Median change across the lane's monthly series; null when the series is too short. */
+  change_90d_pct?: number | null;
+  /** Fresh supply: listings first seen in the last seven days. */
+  new_7d_count?: number;
 }
 
 export interface ProDistrictProfile {
@@ -141,6 +147,9 @@ export interface ProReportPayload {
 }
 
 export interface ProArbitrageGap {
+  /** Populated in market-wide scans, null when the scan was scoped to one lane. */
+  make?: string | null;
+  model?: string | null;
   buy_district: string;
   sell_district: string;
   buy_median_lkr: number;
@@ -167,4 +176,55 @@ export interface ProReportOptions {
   listingLimit?: number;
   includeFilters?: boolean;
   includeDisclaimer?: boolean;
+}
+
+/** One month of a lane's own price series, for the in-table sparkline. */
+export interface ProLaneSparkPoint {
+  month: string;
+  median_price_lkr: number | null;
+  listing_count: number;
+}
+
+/** Daily count of newly first-seen listings. */
+export interface ProDailySupplyPoint {
+  date: string;
+  count: number;
+}
+
+export interface ProPriceBand {
+  label: string;
+  low_lkr: number;
+  high_lkr: number;
+  count: number;
+}
+
+export interface ProScoreBand {
+  label: string;
+  count: number;
+  share_pct: number;
+}
+
+export interface ProDaysToClear {
+  median_days: number | null;
+  p25_days: number | null;
+  p75_days: number | null;
+  sample_size: number;
+}
+
+export interface ProPriceCutShare {
+  cut_count: number;
+  tracked_count: number;
+  share_pct: number;
+}
+
+/** `/pro/market-pulse` — the desk's supply, spread and velocity evidence. */
+export interface ProMarketPulse {
+  generated_at: string;
+  new_24h: number;
+  new_7d: number;
+  daily_supply: ProDailySupplyPoint[];
+  price_deciles: ProPriceBand[];
+  deal_score_bands: ProScoreBand[];
+  days_to_clear: ProDaysToClear;
+  price_cut_share: ProPriceCutShare;
 }

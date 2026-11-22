@@ -37,6 +37,7 @@ import type {
   ProArbitrageGap,
   ProDetailPayload,
   ProDistrictProfile,
+  ProMarketPulse,
   ProMarketSnapshot,
   ProVehicleLane,
   ProVehicleLaneFilters,
@@ -3013,11 +3014,30 @@ export const getProDistrictDetail = async (district: string): Promise<ProDetailP
 };
 
 export const getProArbitrageGaps = async (
-  make: string,
-  model: string,
+  make?: string,
+  model?: string,
   limit = 10,
 ): Promise<ProArbitrageGap[]> => {
-  return fetchJSON<ProArbitrageGap[]>("/pro/arbitrage-gaps", { make, model, limit }, authHeaders());
+  const params: Record<string, string | number> = { limit };
+  if (make && model) {
+    params.make = make;
+    params.model = model;
+  }
+  return fetchJSON<ProArbitrageGap[]>("/pro/arbitrage-gaps", params, authHeaders());
+};
+
+/** `/pro/market-pulse` — daily supply, price deciles, score spread, velocity. */
+export const getProMarketPulse = async (): Promise<ProMarketPulse> => {
+  return fetchJSON<ProMarketPulse>("/pro/market-pulse", undefined, authHeaders());
+};
+
+/**
+ * The mix-adjusted price index at Pro depth (full history + per-make segments).
+ * The public `getPriceIndex` reads a free-depth CDN snapshot, so this one skips
+ * it and asks the live API with the Pro bearer token.
+ */
+export const getProPriceIndex = async (): Promise<PriceIndex> => {
+  return fetchJSON<PriceIndex>("/stats/price-index", undefined, authHeaders());
 };
 
 export const getListingsForExport = async (

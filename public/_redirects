@@ -7,6 +7,8 @@
 # directly (VITE_API_URL). Do not re-add a proxy rule or a Function for it.
 /assets/* /assets/:splat 200
 /snapshots/* /snapshots/:splat 200
+# The Pro desk keeps its mode in the path (/pro, /pro/lanes, /pro/sources …).
+/pro/* / 200
 # SPA routes with no prerendered shell.
 # Static routes (/calculator, /trends, /cars/:make, /cars/:make/:model, ...) are
 # served from the route shells scripts/prerender-seo.mjs writes, so they need

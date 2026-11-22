@@ -276,6 +276,12 @@ class ProMarketSnapshot(BaseModel):
     top_opportunities: List[ProListingSample]
 
 
+class LaneSparkPoint(BaseModel):
+    month: str
+    median_price_lkr: Optional[float] = None
+    listing_count: int
+
+
 class ProVehicleLane(BaseModel):
     make: str
     model: str
@@ -290,6 +296,9 @@ class ProVehicleLane(BaseModel):
     top_district: Optional[str] = None
     top_source: Optional[str] = None
     latest_seen_at: Optional[datetime] = None
+    spark_6m: List[LaneSparkPoint] = Field(default_factory=list)
+    change_90d_pct: Optional[float] = None
+    new_7d_count: int = 0
 
 
 class ProDistrictProfile(BaseModel):
@@ -306,6 +315,48 @@ class ProDistrictProfile(BaseModel):
     top_models: List[DistrictTopModel]
     source_mix: List[ProBreakdownPoint]
     sample_listings: List[ProListingSample]
+
+
+class MarketPulseDailySupplyPoint(BaseModel):
+    date: str
+    count: int
+
+
+class MarketPulsePriceDecile(BaseModel):
+    label: str
+    low_lkr: float
+    high_lkr: float
+    count: int
+
+
+class MarketPulseDealScoreBand(BaseModel):
+    label: str
+    count: int
+    share_pct: float
+
+
+class MarketPulseDaysToClear(BaseModel):
+    median_days: Optional[float] = None
+    p25_days: Optional[float] = None
+    p75_days: Optional[float] = None
+    sample_size: int = 0
+
+
+class MarketPulsePriceCutShare(BaseModel):
+    cut_count: int = 0
+    tracked_count: int = 0
+    share_pct: float = 0.0
+
+
+class MarketPulse(BaseModel):
+    generated_at: datetime
+    new_24h: int
+    new_7d: int
+    daily_supply: List[MarketPulseDailySupplyPoint]
+    price_deciles: List[MarketPulsePriceDecile]
+    deal_score_bands: List[MarketPulseDealScoreBand]
+    days_to_clear: MarketPulseDaysToClear
+    price_cut_share: MarketPulsePriceCutShare
 
 
 class ProDetailPayload(BaseModel):
@@ -663,3 +714,6 @@ class ProArbitrageGap(BaseModel):
     gap_pct: float
     buy_listing_count: int
     sell_listing_count: int
+    # Set only by market-wide mode; None when the pair came from one lane.
+    make: Optional[str] = None
+    model: Optional[str] = None
