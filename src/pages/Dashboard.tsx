@@ -864,7 +864,9 @@ export default function Dashboard() {
                         {...(motionStill ? {} : press)}
                         className={cn(
                           "tap-44 relative isolate inline-flex min-h-10 items-center rounded-full border px-4 text-footnote font-semibold transition-colors",
-                          active ? "cine-chip border-transparent text-[var(--cine-hero-pill-fg)]" : "cine-chip",
+                          // Active chip takes no .cine-chip: its colour rule would
+                          // beat the pill-ink utility and hide the label.
+                          active ? "border-transparent text-[var(--cine-hero-pill-fg)]" : "cine-chip",
                         )}
                       >
                         {active ? (
