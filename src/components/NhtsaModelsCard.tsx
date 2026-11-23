@@ -119,7 +119,7 @@ export function NhtsaModelsCard({ make, model, compact = false, vin }: NhtsaMode
                       >
                         <p className="text-caption font-semibold text-foreground leading-snug">{m.model}</p>
                         {!compact && m.model_id && (
-                          <p className="text-caption font-medium text-muted-foreground/70">ID {m.model_id}</p>
+                          <p className="text-caption font-medium text-muted-foreground">ID {m.model_id}</p>
                         )}
                       </div>
                     ))}

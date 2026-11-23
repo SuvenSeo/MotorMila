@@ -495,7 +495,7 @@ export default function ListingDetail() {
       {monthly && (
         <p className="num mt-3 text-footnote text-muted-foreground">
           {t("listing.monthlyLine", "{amount} est. /mo", { amount: formatMonthlyLkr(monthly.monthlyLkr) })}
-          <span className="text-muted-foreground/80">
+          <span className="text-muted-foreground">
             {' · '}
             {t("listing.monthlyBasis", "{ltv}% loan (CBSL cap), {rate}% over {years} yrs", {
               ltv: monthly.ltvPct,

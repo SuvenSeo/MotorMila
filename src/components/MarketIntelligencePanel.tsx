@@ -343,7 +343,7 @@ export const MarketIntelligencePanel = memo(function MarketIntelligencePanel({
             ) : null}
           </p>
           {snapshot?.generated_at ? (
-            <p className="text-caption font-medium text-muted-foreground/80">
+            <p className="text-caption font-medium text-muted-foreground">
               {t("intel.snapshotAgo", "Snapshot {age} ago", { age: formatCompactAge(snapshot.generated_at) })}
             </p>
           ) : null}

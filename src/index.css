@@ -24,10 +24,13 @@
    ========================================================================== */
 
 @layer base {
-  /* The light palette also re-points any nested `.theme-dark` scope, so a
-     component that forces dark tokens (a panel, a stage, a topbar) renders in
-     the page's light theme instead of punching a dark hole in it. */
+  /* Light is the root palette. `.theme-light` re-declares the same block so a
+     light island can sit inside a `.theme-dark` stage, and `html.theme-light
+     .theme-dark` re-points a dark-scoped component (a panel, a stage, a
+     topbar) to the light palette, so it renders in the page's theme instead of
+     punching a dark hole in it. */
   :root,
+  .theme-light,
   html.theme-light .theme-dark {
     /* ── Core surfaces (LIGHT — gallery) ──────────────────────────────── */
     --background: 36 28% 97.2%;          /* warm studio plaster */
@@ -225,8 +228,8 @@
     color-scheme: dark;
   }
 
-  /* .theme-light kept as an explicit no-op alias of :root for the toggle. */
-  .theme-light { color-scheme: light; }
+  /* `.theme-light` now carries the light token block above (shared selector),
+     so it is a real inverse of `.theme-dark`, not just a colour-scheme hint. */
 }
 
 /* ============================================================================

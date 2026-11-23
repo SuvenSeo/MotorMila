@@ -64,7 +64,7 @@ export function ProFeatureLock({
         <span className="truncate">{label}</span>
         {/* Never "Pro · Pro" when the label already is the plan name. */}
         {label.trim().toLowerCase() !== t("common.pro", "Pro").trim().toLowerCase() ? (
-          <span className="shrink-0 text-caption font-medium text-muted-foreground/80">· {t("common.pro", "Pro")}</span>
+          <span className="shrink-0 text-caption font-medium text-muted-foreground">· {t("common.pro", "Pro")}</span>
         ) : null}
       </Link>
     );
