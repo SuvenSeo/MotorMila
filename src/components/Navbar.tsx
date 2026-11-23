@@ -373,13 +373,7 @@ export function Navbar() {
 
       {/* Hamburger menu panel (below lg) — every route, grouped under its destination */}
       <AnimatePresence>
-        {/* Dimmed backdrop, portalled to <body>: the header is a transformed
-            box, so a fixed child inside it would not cover the viewport. It
-            sits under the header (z-header) so the row and panel stay crisp.
-            The display:contents span is only there because AnimatePresence
-            tracks DOM children, not portals — it lets the backdrop animate
-            out with the panel. */}
-        {menuOpen && typeof document !== "undefined" ? (
+        {menuOpen && headerRef.current?.parentElement ? (
           <span key="site-menu-backdrop" className="contents">
             {createPortal(
               <m.div
@@ -390,7 +384,7 @@ export function Navbar() {
                 onClick={dismissMenu}
                 aria-hidden
               />,
-              document.body,
+              headerRef.current.parentElement,
             )}
           </span>
         ) : null}

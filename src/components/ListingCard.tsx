@@ -30,10 +30,11 @@ import { PriceSparkline } from "@/components/PriceSparkline";
 import { getSourceAttribution } from "@/lib/sourceAttribution";
 import { silhouetteFor } from "@/lib/vehicleSilhouette";
 import "@/styles/cinematic-pages.css";
-import { computeDealBadge, dealBadgeLabel, DEAL_BAR_CLASSES, DEAL_TEXT_CLASSES } from "@/lib/dealBadge";
+import { computeDealBadge, dealBadgeLabel } from "@/lib/dealBadge";
 import { isLeaseTakeoverListing } from "@/lib/leaseTakeover";
 import { estimateListingMonthly, formatMonthlyLkr } from "@/lib/listingFinance";
 import { DealBadge } from "@/components/listing/DealBadge";
+import { ListingPriceComparison } from "@/components/listing/ListingPriceComparison";
 import { CompareGlyph, SaveHeartIcon } from "@/components/listing/SaveHeart";
 import { fadeIn, fadeUp, hoverLift, press, useReducedMotionOrLowData } from "@/lib/motion";
 import { cardVariants } from "@/components/ui/card";
@@ -76,10 +77,6 @@ function formatEngineCc(value: number | null | undefined): string | null {
   const cc = plausibleEngineCc(value, undefined);
   if (cc === undefined) return null;
   return `${Math.round(cc).toLocaleString()} cc`;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
 
 /** Photo-corner actions: glass on the photo, blue when engaged. */
@@ -152,10 +149,6 @@ export const ListingCard = memo(function ListingCard({
     verdict,
   });
   const fmv = hasKnownPrice && !isLease ? fmvSummaryFromVerdict(priceValue, verdict, t) : null;
-  const marketDeltaPct = fmv ? fmv.delta_pct : null;
-  const marketPosition = marketDeltaPct === null ? 50 : clamp(50 - marketDeltaPct, 8, 92);
-  // FMV tone follows the deal badge so a "verify" outlier is never painted green.
-  const fmvKind = fmv?.verify_first ? "verify" : fmv?.band === "below" ? "below" : fmv?.band === "above" ? "above" : "fair";
 
   // One verdict, stated once: the typical-price band already carries the
   // percentage, so the rupee-gap badge only shows when there is no band (lease
@@ -382,25 +375,7 @@ export const ListingCard = memo(function ListingCard({
           </div>
 
           {fmv != null && (
-            <div className="rounded-control border border-border/50 bg-surface-2/50 px-3 py-2">
-              <div className="flex items-baseline justify-between gap-2">
-                <p className="num truncate text-caption font-medium text-label-2">
-                  {t("listingCard.typical", "Typical {price}", { price: formatPrice(fmv.fmv_lkr) })}
-                </p>
-                <p
-                  className={`num shrink-0 text-caption font-semibold ${DEAL_TEXT_CLASSES[fmvKind]}`}
-                  title={hiddenGapLabel ?? undefined}
-                >
-                  {fmv.shortLabel}
-                </p>
-              </div>
-              <div className="relative mt-2 h-1.5 overflow-hidden rounded-full bg-foreground/10">
-                <div
-                  className={`absolute inset-y-0 left-0 rounded-full transition-ui duration-long motion-reduce:transition-none ${DEAL_BAR_CLASSES[fmvKind]}`}
-                  style={{ width: `${marketPosition}%` }}
-                />
-              </div>
-            </div>
+            <ListingPriceComparison fmv={fmv} verdictTitle={hiddenGapLabel ?? undefined} />
           )}
 
           {(showDealBadge || hasMetaChips || mileageKnown || hybridCliff) && (

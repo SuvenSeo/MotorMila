@@ -9,9 +9,8 @@ import { plausibleEngineCc } from "@/lib/engineCapacity";
 import { silhouetteFor } from "@/lib/vehicleSilhouette";
 import { vehicleTokenLabel } from "@/lib/vehicleTokens";
 import { formatSourceName } from "@/lib/sourceAttribution";
-import { fmvSummaryFromVerdict, type FmvSummary } from "@/lib/fmv";
+import { fmvSummaryFromVerdict } from "@/lib/fmv";
 import { listingRowVerdict } from "@/lib/priceVerdict";
-import { DEAL_BAR_CLASSES, DEAL_TEXT_CLASSES } from "@/lib/dealBadge";
 import { minCashDownForPrice } from "@/lib/cashToOwn";
 import { VehicleThumbnail } from "@/components/VehicleThumbnail";
 import { Button } from "@/components/ui/button";
@@ -21,10 +20,10 @@ import { cn } from "@/lib/utils";
 import { useAppPreferences } from "@/lib/appPreferences";
 import { fadeUp, hoverLift, press, useReducedMotionOrLowData } from "@/lib/motion";
 import { useCanHover } from "@/components/listing/listingMotion";
+import { ListingPriceComparison } from "@/components/listing/ListingPriceComparison";
 import "@/styles/cinematic-pages.css";
 
 type Translate = (key: string, fallback?: string, vars?: Record<string, string | number>) => string;
-type DealKind = keyof typeof DEAL_TEXT_CLASSES;
 type PickBand = "elite" | "strong" | "watch";
 
 const BAND_CHIP: Record<PickBand, string> = {
@@ -139,7 +138,6 @@ function pickView(listing: CarListing, t: Translate) {
   const hasMedian = Number.isFinite(median) && median > 0;
   const verdict = listingRowVerdict({ ...listing, price_lkr: hasPrice ? asking : null, market_median_lkr: hasMedian ? median : null });
   const fmv = hasPrice ? fmvSummaryFromVerdict(asking, verdict, t) : null;
-  const kind: DealKind = fmv?.verify_first ? "verify" : fmv?.band === "below" ? "below" : fmv?.band === "above" ? "above" : "fair";
   const engineCc = plausibleEngineCc(listing.engine_cc, listing.year);
   const specs = [
     vehicleTokenLabel("transmission", listing.transmission, t),
@@ -151,8 +149,6 @@ function pickView(listing: CarListing, t: Translate) {
     hasPrice,
     asking,
     fmv,
-    kind,
-    position: fmv ? Math.max(8, Math.min(92, 50 - fmv.delta_pct)) : 0,
     specs,
     sourceName: formatSourceName(listing.source) || listing.source,
     district: listing.district || "LK",
@@ -167,27 +163,6 @@ function NoPhotoCaption({ sourceName }: { sourceName: string }) {
       <ImageOff aria-hidden className="h-3.5 w-3.5" />
       {t("listingCard.noPhoto", "No photo · see it on {source}", { source: sourceName })}
     </p>
-  );
-}
-
-/** "Typical Rs 12.4M" beside the savings verdict, over a thin position meter. */
-function TypicalAskingBlock({ fmv, kind, position, className }: { fmv: FmvSummary; kind: DealKind; position: number; className?: string }) {
-  const { t } = useAppPreferences();
-  return (
-    <div className={cn("rounded-control border border-border/60 bg-surface-2/50 px-3 py-2", className)}>
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="num truncate text-caption font-medium text-label-2">
-          {t("listingCard.typical", "Typical {price}", { price: formatPrice(fmv.fmv_lkr) })}
-        </span>
-        <span className={cn("num shrink-0 text-caption font-semibold", DEAL_TEXT_CLASSES[kind])}>{fmv.shortLabel}</span>
-      </div>
-      <div className="relative mt-2 h-1 overflow-hidden rounded-full bg-foreground/10">
-        <div
-          className={cn("absolute inset-y-0 left-0 h-full rounded-full transition-transform duration-long ease-decelerate motion-reduce:transition-none", DEAL_BAR_CLASSES[kind])}
-          style={{ transform: `scaleX(${position / 100})`, transformOrigin: "left" }}
-        />
-      </div>
-    </div>
   );
 }
 
@@ -289,7 +264,7 @@ export function BestPickCard({ listing, rank, showCashDown, variants }: BestPick
           ) : null}
         </div>
 
-        {view.fmv ? <TypicalAskingBlock fmv={view.fmv} kind={view.kind} position={view.position} /> : null}
+        {view.fmv ? <ListingPriceComparison fmv={view.fmv} /> : null}
 
         <div className="mt-auto flex items-center justify-between gap-3 border-t border-separator pt-3 text-caption text-label-2">
           <span className="flex min-w-0 items-center gap-1.5">
@@ -370,7 +345,7 @@ export function BestPickHero({ listing, showCashDown }: BestPickHeroProps) {
               <p className="num text-footnote font-semibold text-primary">{t("picks.down", "{price} down", { price: formatPrice(down) })}</p>
             ) : null}
           </div>
-          {view.fmv ? <TypicalAskingBlock fmv={view.fmv} kind={view.kind} position={view.position} /> : null}
+          {view.fmv ? <ListingPriceComparison fmv={view.fmv} /> : null}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-label-2">
             <span className="flex items-center gap-1.5">
               <MapPin aria-hidden className="h-3.5 w-3.5" />

@@ -77,7 +77,7 @@ export default function SignIn() {
           aria-label="Motormila home"
           className="w-fit rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <BrandLogo size="nav" showTagline={false} />
+          <BrandLogo size="nav" markClassName="h-7 sm:h-8" showTagline={false} />
         </Link>
       </Auth11Item>
 

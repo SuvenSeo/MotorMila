@@ -16,7 +16,13 @@ export function ListingCardSkeleton() {
           <Skeleton shape="text" className="h-7 w-2/5" />
           <Skeleton shape="text" className="h-6 w-20" />
         </div>
-        <Skeleton shape="text" className="h-14 w-full" />
+        <div className="space-y-1.5">
+          <div className="flex justify-between gap-2">
+            <Skeleton shape="text" className="h-4 w-2/5" />
+            <Skeleton shape="text" className="h-4 w-1/3" />
+          </div>
+          <Skeleton className="h-1 w-full rounded-full" />
+        </div>
         <div className="mt-1 flex items-center justify-between border-t border-separator pt-3">
           <div className="space-y-1.5">
             <Skeleton shape="text" className="h-3.5 w-24" />
