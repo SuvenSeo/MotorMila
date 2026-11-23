@@ -219,7 +219,7 @@ export function NotificationBell() {
               </button>
             )}
             <span
-              className="inline-flex items-center gap-1 text-caption text-muted-foreground/70"
+              className="inline-flex items-center gap-1 text-caption text-muted-foreground"
               title={pushOn ? t("notifications.pushOnHint", "Web push on — price-drop topics active") : t("notifications.pushOffHint", "In-app always delivers; push dormant until enabled")}
             >
               <span

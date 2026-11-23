@@ -9,12 +9,12 @@
       content="Motormila tracks Sri Lanka vehicle prices across the major marketplaces — live listings, fair-value estimates, price trends and deal alerts, so you can check a fair price before buying or selling a car, van, bike or three-wheeler."
     />
     <meta name="author" content="Motormila" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0c0a09" />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8f4ee" />
+    <meta name="theme-color" content="#0c0a09" id="theme-color-meta" />
     <script>
       /* Pre-paint theme bootstrap — applies the saved/default theme before
          first paint so there is no flash of the wrong palette. Dark is default. */
       (function () {
+        var CHROME = { dark: "#0c0a09", light: "#f8f4ee" };
         try {
           var mode = localStorage.getItem("motormila_theme_mode") || localStorage.getItem("autolens_theme_mode") || "dark";
           var dark =
@@ -25,6 +25,8 @@
           var root = document.documentElement;
           root.classList.add(dark ? "theme-dark" : "theme-light");
           root.style.colorScheme = dark ? "dark" : "light";
+          var meta = document.getElementById("theme-color-meta");
+          if (meta) meta.setAttribute("content", dark ? CHROME.dark : CHROME.light);
         } catch (e) {
           document.documentElement.classList.add("theme-dark");
         }

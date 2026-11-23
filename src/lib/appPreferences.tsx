@@ -28,6 +28,9 @@ const LEGACY_THEME_STORAGE_KEY = "autolens_theme_mode";
 const LANGUAGE_STORAGE_KEY = "motormila_language";
 const DEFAULT_THEME_MODE: ThemeMode = "dark";
 
+/** Browser-chrome colour per theme — the page background of each palette. */
+const THEME_CHROME: Record<"dark" | "light", string> = { dark: "#0c0a09", light: "#f8f4ee" };
+
 const AppPreferencesContext = createContext<AppPreferencesContextValue | null>(null);
 
 function systemPrefersDark(): boolean {
@@ -143,6 +146,9 @@ export function AppPreferencesProvider({ children }: { children: React.ReactNode
       root.classList.toggle("theme-light", next === "light");
       root.classList.toggle("theme-dark", next === "dark");
       root.style.colorScheme = next;
+      // Keep the mobile browser chrome / installed-app title bar on the same
+      // sheet as the page (matches the pre-paint bootstrap in index.html).
+      document.getElementById("theme-color-meta")?.setAttribute("content", THEME_CHROME[next]);
     };
 
     applyTheme();
@@ -154,6 +160,16 @@ export function AppPreferencesProvider({ children }: { children: React.ReactNode
     media.addEventListener("change", listener);
     return () => media.removeEventListener("change", listener);
   }, [themeMode]);
+
+  // A theme picked in another tab arrives here instead of only on reload.
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== THEME_STORAGE_KEY || event.newValue === null) return;
+      if (isThemeMode(event.newValue)) setThemeModeState(event.newValue);
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   const setThemeMode = (mode: ThemeMode) => {
     setThemeModeState(mode);

@@ -89,6 +89,34 @@ describe("P2/P3 frontend regressions", () => {
     expect(readSavedThemeMode()).toBe("dark");
   });
 
+  it("keeps the browser-chrome theme colour and follows a theme picked in another tab", async () => {
+    const meta = document.createElement("meta");
+    meta.id = "theme-color-meta";
+    meta.setAttribute("content", "#0c0a09");
+    document.head.appendChild(meta);
+
+    function Probe() {
+      const { themeMode } = useAppPreferences();
+      return <span data-testid="mode">{themeMode}</span>;
+    }
+
+    render(
+      <AppPreferencesProvider>
+        <Probe />
+      </AppPreferencesProvider>,
+    );
+
+    expect(meta.getAttribute("content")).toBe("#0c0a09");
+
+    localStorage.setItem("motormila_theme_mode", "light");
+    window.dispatchEvent(new StorageEvent("storage", { key: "motormila_theme_mode", newValue: "light" }));
+
+    await waitFor(() => expect(screen.getByTestId("mode")).toHaveTextContent("light"));
+    expect(document.documentElement.classList.contains("theme-light")).toBe(true);
+    expect(meta.getAttribute("content")).toBe("#f8f4ee");
+    meta.remove();
+  });
+
   it("locks Deal score sorting on BestPicks for free-tier users", async () => {
     const getListingsSpy = vi.spyOn(api, "getListings").mockResolvedValue({
       listings: [MOCK_LISTING],

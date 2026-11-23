@@ -24,7 +24,11 @@
    ========================================================================== */
 
 @layer base {
-  :root {
+  /* Light is the root palette; `.theme-light` re-declares the same block so a
+     light island can sit inside a `.theme-dark` stage (and vice versa) — an
+     element's own class always wins on its subtree. */
+  :root,
+  .theme-light {
     /* ── Core surfaces (LIGHT — gallery) ──────────────────────────────── */
     --background: 36 28% 97.2%;          /* warm studio plaster */
     --foreground: 24 16% 9%;             /* warm ink */
@@ -221,8 +225,8 @@
     color-scheme: dark;
   }
 
-  /* .theme-light kept as an explicit no-op alias of :root for the toggle. */
-  .theme-light { color-scheme: light; }
+  /* `.theme-light` now carries the light token block above (shared selector),
+     so it is a real inverse of `.theme-dark`, not just a colour-scheme hint. */
 }
 
 /* ============================================================================

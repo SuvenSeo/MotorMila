@@ -724,7 +724,7 @@ export default function DealerDashboard() {
                     <li key={d.district} className="min-w-0">
                       <div className="flex items-baseline justify-between gap-2">
                         <p className="min-w-0 truncate text-footnote font-semibold text-foreground">{d.district}</p>
-                        <span className="shrink-0 whitespace-nowrap text-caption font-semibold tabular-nums text-[hsl(213_100%_72%)]">
+                        <span className="shrink-0 whitespace-nowrap text-caption font-semibold tabular-nums text-primary">
                           {t("dealer.cine.demand", "Demand {score}", { score: String(d.demandScore) })}
                         </span>
                       </div>
