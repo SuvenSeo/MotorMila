@@ -342,7 +342,7 @@ describe("Home page order and honesty (ui/shell)", () => {
     expect(screen.queryByText(/verified signals/i)).not.toBeInTheDocument();
   });
 
-  it("renders the studio-bay hero background without the floating AI Value HUD", async () => {
+  it("renders the studio-bay hero plate pair without the floating AI Value HUD", async () => {
     renderDashboard();
     await screen.findByText("FilterSidebar");
 
@@ -354,7 +354,11 @@ describe("Home page order and honesty (ui/shell)", () => {
     expect(hero!.querySelector(".cine-search")).not.toBeNull();
     expect(hero!.querySelector(".cine-strip")).not.toBeNull();
 
-    const bgImg = hero!.querySelector<HTMLImageElement>("img.cine-hero__img");
-    expect(bgImg?.getAttribute("src")).toMatch(/page_home_hero_studio/);
+    // Dark plate + light plate, stacked; the theme class decides which one shows.
+    const plates = Array.from(hero!.querySelectorAll<HTMLImageElement>("img.cine-hero__img"));
+    expect(plates.map((img) => img.getAttribute("src"))).toEqual([
+      expect.stringMatching(/page_home_hero_showroom_dark/),
+      expect.stringMatching(/page_home_hero_showroom_light/),
+    ]);
   });
 });

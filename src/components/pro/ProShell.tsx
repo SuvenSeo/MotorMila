@@ -65,7 +65,7 @@ export function ProShell({
   return (
     <div className="min-h-screen bg-background">
       <header className="theme-dark sticky top-0 z-40 text-foreground">
-        <div className="border-b border-white/10 bg-[hsl(var(--cine-ink))]">
+        <div className="border-b border-white/10 cine-ink-surface">
           <div className="mx-auto flex min-h-14 max-w-[1640px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:px-5">
             <Link to="/" className="flex shrink-0 items-center gap-2 no-underline">
               <img src="/logo.png" alt="Motormila" className="h-7 w-7 rounded-full ring-1 ring-white/15" />
@@ -200,7 +200,7 @@ export function ProShell({
 /** The tape: the five numbers you want visible at every scroll position. */
 function MarketTape({ stats }: { stats: TapeStat[] }) {
   return (
-    <div className="border-b border-white/10 bg-[hsl(var(--cine-ink))]">
+    <div className="border-b border-white/10 cine-ink-surface">
       <dl className="mx-auto flex max-w-[1640px] items-center gap-x-5 gap-y-1 overflow-x-auto px-4 py-1.5 sm:px-5">
         {stats.map((stat) => (
           <div key={stat.key} className="flex shrink-0 items-baseline gap-1.5">

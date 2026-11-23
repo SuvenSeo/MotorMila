@@ -19,6 +19,8 @@ export type HeroVariant = {
   label: string;
   blurb: string;
   image: VisualAsset;
+  /** Light-mode plate; when set the hero crossfades between it and `image` with the theme. */
+  imageLight?: VisualAsset;
   objectPosition: string;
   imageOpacity: string;
   align: HeroAlign;
@@ -35,11 +37,12 @@ export type HeroVariant = {
 export const HERO_VARIANTS: HeroVariant[] = [
   {
     id: "studio-bay",
-    label: "0 · Studio concrete bay",
-    blurb: "Minimalist obsidian concrete studio bay with overhead softbox light — left copy, car on the right.",
-    image: visuals.pageHomeHeroStudio,
-    // Desktop crop; keep the studio-lit car anchored cleanly on the right.
-    objectPosition: "80% 52%",
+    label: "0 · Showroom (day / night)",
+    blurb: "Private showroom, car on the right — the night plate in dark mode, the daylight plate in light mode.",
+    image: visuals.pageHomeHeroShowroomDark,
+    imageLight: visuals.pageHomeHeroShowroomLight,
+    // Desktop crop; keep the car anchored cleanly on the right.
+    objectPosition: "70% 50%",
     imageOpacity: "opacity-100",
     align: "left",
     tone: "dark",

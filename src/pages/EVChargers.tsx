@@ -150,12 +150,12 @@ export default function EVChargers() {
             <div aria-live="polite">
               {hasCount ? (
                 <>
-                  <p className="cine-eyebrow text-white/60">{t("ev.chargersCountLabel", "Stations in radius")}</p>
+                  <p className="cine-eyebrow cine-surface-eyebrow">{t("ev.chargersCountLabel", "Stations in radius")}</p>
                   <p className="cine-display mt-3 text-[clamp(2.25rem,1.8rem+2vw,3.25rem)] leading-none tabular-nums text-white">{count.toLocaleString("en-US")}</p>
                   <p className="mt-2 text-footnote text-white/65">{t("ev.chargersCountHint", "{radius} km of {district}", { radius: radiusKm, district })}</p>
                 </>
               ) : (
-                <p className="cine-eyebrow text-white/60">{t("ev.chargersCountHint", "{radius} km of {district}", { radius: radiusKm, district })}</p>
+                <p className="cine-eyebrow cine-surface-eyebrow">{t("ev.chargersCountHint", "{radius} km of {district}", { radius: radiusKm, district })}</p>
               )}
             </div>
             <div className="grid gap-4 sm:grid-cols-2 sm:items-end lg:grid-cols-1 xl:grid-cols-2">

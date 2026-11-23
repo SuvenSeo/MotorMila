@@ -125,7 +125,7 @@ export default function ListingDetail() {
     viewport: { once: true, margin: '0px 0px -8% 0px' },
     variants: motionCalm ? fadeIn : fadeUp,
   } as const;
-  const { t, localeTag, language } = useAppPreferences();
+  const { t, localeTag, language, resolvedTheme } = useAppPreferences();
   const { hasProAccess, isAdmin } = useAuth();
   const fullAccess = hasFullPlatformAccess({ hasProAccess, isAdmin });
   // A card tap hands over its listing + decoded photo (lib/listingHandoff):
@@ -621,11 +621,13 @@ export default function ListingDetail() {
       variants={revealContainer}
       className="lp-page relative min-h-screen overflow-x-clip bg-background pb-44 lg:pb-0"
     >
-      {/* Stage — "Night drive": a dark band (both themes) holding the title and
-          the filmstrip gallery. `theme-dark` scopes every token inside it. */}
+      {/* Stage — "Showroom": the title and the filmstrip gallery sit on a band
+          that follows the theme (ink at night, plaster in daylight). The stage's
+          own theme class scopes every token inside it, so buttons, chips and
+          muted copy flip with the band instead of the page. */}
       <motion.section
         variants={revealItem}
-        className="lp-stage cine-stage theme-dark relative z-10 -mt-[var(--nav-offset)] pt-[var(--nav-offset)] text-foreground"
+        className={`lp-stage cine-stage ${resolvedTheme === "light" ? "theme-light" : "theme-dark"} relative z-10 -mt-[var(--nav-offset)] pt-[var(--nav-offset)] text-foreground`}
       >
         <div className="mx-auto flex max-w-[1280px] flex-col px-5 pb-8 pt-3 sm:px-6 md:pb-10 md:pt-4">
           <div className="flex items-center justify-between gap-3">
@@ -742,7 +744,7 @@ export default function ListingDetail() {
                 <Database aria-hidden className="h-3 w-3" /> {t("listingImage.credit", "Photo: {source}", { source: attribution.sourceName })}
               </span>
               <div className="cine-nophoto">
-                <p className="cine-eyebrow text-white/60">{t("listing.noPhoto.kicker", "No photos on Motormila")}</p>
+                <p className="cine-eyebrow cine-surface-eyebrow">{t("listing.noPhoto.kicker", "No photos on Motormila")}</p>
                 <p className="cine-display text-title3 text-white">{displayName}</p>
                 {listingUrl && (
                   <a

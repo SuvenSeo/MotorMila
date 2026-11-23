@@ -157,7 +157,7 @@ export default function HowWePrice() {
 
               {/* Result card: how the asking price is read against FMV. */}
               <figure className="cine-panel theme-dark mt-8 p-6 text-foreground sm:p-8">
-                <p className="cine-eyebrow text-white/60">{t("howPrice.cine.bandsKicker", "How a deal badge reads")}</p>
+                <p className="cine-eyebrow cine-surface-eyebrow">{t("howPrice.cine.bandsKicker", "How a deal badge reads")}</p>
                 <div className="cine-hwp-scale mt-12">
                   <span aria-hidden className="cine-hwp-tick" style={{ left: "34.5%" } as CSSProperties}>−{BELOW_PCT}%</span>
                   <span aria-hidden className="cine-hwp-tick cine-hwp-tick--fmv" style={{ left: "46.4%" } as CSSProperties}>FMV</span>

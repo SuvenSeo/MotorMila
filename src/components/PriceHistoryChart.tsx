@@ -218,13 +218,13 @@ export const PriceHistoryChart = memo(function PriceHistoryChart({
   return (
     <Card
       padding="md"
-      className={cine ? "cine-result cine-chart theme-dark w-full border-foreground/10 bg-[hsl(var(--cine-ink))] text-foreground shadow-e2" : "w-full"}
+      className={cine ? "cine-result cine-chart theme-dark w-full border-foreground/10 cine-ink-surface text-foreground shadow-e2" : "w-full"}
     >
       {cine ? <div aria-hidden className="cine-result__light" /> : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className={cine ? "cine-eyebrow text-white/60" : "text-footnote font-semibold text-primary"}>{t("priceChart.eyebrow", "Price history")}</p>
-          <h3 className={cine ? "cine-display mt-2 text-[clamp(1.5rem,1.1rem+1.6vw,2.25rem)] text-white [overflow-wrap:anywhere]" : "mt-1 font-display text-title2 font-semibold text-foreground [overflow-wrap:anywhere]"}>{heading}</h3>
+          <p className={cine ? "cine-eyebrow cine-surface-eyebrow" : "text-footnote font-semibold text-primary"}>{t("priceChart.eyebrow", "Price history")}</p>
+          <h3 className={cine ? "cine-display cine-surface-title mt-2 text-[clamp(1.5rem,1.1rem+1.6vw,2.25rem)] [overflow-wrap:anywhere]" : "mt-1 font-display text-title2 font-semibold text-foreground [overflow-wrap:anywhere]"}>{heading}</h3>
           {periodLabel ? <p className="mt-1 text-footnote text-label-2">{periodLabel}</p> : null}
         </div>
         <div className="flex flex-col items-start gap-2 sm:items-end">

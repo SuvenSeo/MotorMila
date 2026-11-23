@@ -268,7 +268,7 @@ export default function BestPicks() {
             </div>
           ) : biggestCut ? (
             <Link to={`/listing/${biggestCut.listing.id}`} className="group block max-w-3xl text-white no-underline">
-              <p className="cine-eyebrow text-white/60">{t("picks.cine.cutKicker", "Biggest cut this week")}</p>
+              <p className="cine-eyebrow cine-surface-eyebrow">{t("picks.cine.cutKicker", "Biggest cut this week")}</p>
               <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-6">
                 <span className="cine-display shrink-0 text-[clamp(2rem,1.5rem+2vw,3rem)] leading-none tabular-nums text-white">
                   −{biggestCut.drop_pct.toFixed(1)}%
@@ -284,7 +284,7 @@ export default function BestPicks() {
               </div>
             </Link>
           ) : (
-            <p className="max-w-xl text-footnote text-white/65">
+            <p className="max-w-xl text-footnote text-muted-foreground">
               {t("shell.picks.cutsEmpty", "No price cuts spotted in the last 7 days. They show up here when a seller lowers an asking price.")}
             </p>
           )}

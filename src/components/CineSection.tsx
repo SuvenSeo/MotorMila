@@ -39,9 +39,9 @@ export function CineSection({ index, title, body, actions, id, className, childr
 export function CineFigure({ label, value, caption, className }: { label: ReactNode; value: ReactNode; caption?: ReactNode; className?: string }) {
   return (
     <div className={cn("max-w-3xl", className)}>
-      <p className="cine-eyebrow text-white/60">{label}</p>
-      <p className="cine-display mt-3 text-[clamp(2rem,1.5rem+2vw,3rem)] leading-none tabular-nums text-white">{value}</p>
-      {caption ? <p className="mt-2 max-w-xl text-footnote leading-snug text-white/70">{caption}</p> : null}
+      <p className="cine-eyebrow cine-surface-eyebrow">{label}</p>
+      <p className="cine-display mt-3 text-[clamp(2rem,1.5rem+2vw,3rem)] leading-none tabular-nums cine-surface-title">{value}</p>
+      {caption ? <p className="mt-2 max-w-xl cine-surface-body text-footnote leading-snug">{caption}</p> : null}
     </div>
   );
 }

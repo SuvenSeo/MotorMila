@@ -7,7 +7,8 @@
    Tailwind opacity modifiers work: bg-deal-good/10, border-deal-high/30.
    ========================================================================== */
 
-:root {
+:root,
+html.theme-light .theme-dark {
   /* Brand blue for TEXT and icons on page surfaces. bg-primary is a fill
      colour (white text on it ≥ 4.5:1); text-primary maps here instead. */
   --primary-text: 213 100% 42%;          /* #0060D6 — 5.4:1 on background */

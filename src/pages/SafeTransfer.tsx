@@ -324,7 +324,7 @@ export default function SafeTransfer() {
   ];
 
   const result = (
-    <Card className="cine-result theme-dark content-in overflow-hidden bg-[hsl(var(--cine-ink))] text-foreground shadow-e2">
+    <Card className="cine-result theme-dark content-in overflow-hidden cine-ink-surface text-foreground shadow-e2">
       <div aria-hidden className="cine-result__light" />
       <div className="relative">
         <div className="flex items-center gap-2">

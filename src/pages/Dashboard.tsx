@@ -21,10 +21,9 @@ import { MarketSignalsStrip } from "@/components/MarketSignalsStrip";
 import { FuelMixStrip } from "@/components/FuelMixStrip";
 import { DataFreshnessIndicator } from "@/components/DataFreshnessIndicator";
 import { SnapshotModeNotice } from "@/components/SnapshotModeNotice";
-import { AtmosphericImage } from "@/components/AtmosphericImage";
+import { HeroPlate } from "@/components/HeroPlate";
 import { HeroVariantPicker } from "@/components/HeroVariantPicker";
 import { useHeroVariantLab } from "@/hooks/useHeroVariantLab";
-import { usePointerParallax } from "@/hooks/usePointerParallax";
 import "@/styles/cinematic.css";
 import { RevealSection } from "@/components/RevealSection";
 import { SourceCredits } from "@/components/SourceCredits";
@@ -180,7 +179,7 @@ export default function Dashboard() {
   // Guests and free users get normal pagination (no 12-result cap).
   const listingFilters = filters;
   const [noResultsAlertStatus, setNoResultsAlertStatus] = useState<AlertStatus>("idle");
-  const { t } = useAppPreferences();
+  const { t, resolvedTheme } = useAppPreferences();
   const queryClient = useQueryClient();
   const liveMarketSnapshot = useLiveMarketSnapshot();
   // Persisted compare tray (localStorage) so selections survive navigation.
@@ -599,10 +598,9 @@ export default function Dashboard() {
   const isPriceUnavailableMode = filters.price_availability === "unavailable";
   const listingFreshnessAt = liveMarketSnapshot?.latest_listing_at ?? stats?.last_updated ?? null;
   const { variant: heroVariant, setVariantId: setHeroVariantId, showPicker: showHeroLab } = useHeroVariantLab();
-  // The hero is a dark film stage in both themes (white type on the photo);
-  // only the suggestions popover follows the theme.
+  // The hero carries its own palette (styles/cinematic.css): ink stage and white
+  // type in dark mode, plaster stage and warm-ink type in light mode.
   const heroStatsLoading = marketPulseListings <= 0 && statsQuery.isPending && !liveMarketSnapshot;
-  usePointerParallax(heroSectionRef, !motionStill);
   // Suggestions popover rows follow the theme (bg-popover surface).
   const heroPopularBtnClass =
     "w-full rounded-2xl px-3 py-2.5 text-left text-footnote font-medium text-foreground transition-colors hover:bg-surface";
@@ -622,10 +620,10 @@ export default function Dashboard() {
         <HeroVariantPicker activeId={heroVariant.id} onSelect={setHeroVariantId} />
       ) : null}
 
-      {/* ── HERO — Cinematic stage ("Studio concrete bay") ────────────
-          Layers (back → front): photo plate (pointer + scroll parallax,
-          slow settle) · light bloom · scrim · grain ·
-          exposure lift · letterbox curtain. All transform/opacity. */}
+      {/* ── HERO — Cinematic stage ("Showroom") ───────────────────────
+          Layers (back → front): photo plate (scroll drift, slow settle) ·
+          light bloom · scrim · grain · exposure lift · letterbox curtain.
+          The plate holds still under the pointer: only the page scroll moves it. */}
       <section
         ref={heroSectionRef}
         id="overview"
@@ -633,23 +631,18 @@ export default function Dashboard() {
         style={{ "--cine-pos": heroVariant.objectPosition } as CSSProperties}
       >
         <div aria-hidden className="cine-hero__stage">
-          <div className="cine-depth" data-depth="-14">
-            <div className="cine-drift">
-              <div className="cine-settle">
-                <AtmosphericImage
-                  key={heroVariant.id}
-                  src={heroVariant.image.src}
-                  srcSm={heroVariant.image.srcSm}
-                  className="cine-hero__img"
-                  priority
-                  sizes="100vw"
-                />
-              </div>
+          <div className="cine-drift">
+            <div className="cine-settle">
+              <HeroPlate
+                key={heroVariant.id}
+                variant={heroVariant}
+                className="cine-hero__img"
+                priority
+                sizes="100vw"
+              />
             </div>
           </div>
-          <div className="cine-depth" data-depth="-26">
-            <div className="cine-hero__bloom" />
-          </div>
+          <div className="cine-hero__bloom" />
           <div className="cine-hero__scrim" />
           <div className="cine-grain" />
           <div className="cine-exposure" />
@@ -704,7 +697,7 @@ export default function Dashboard() {
                   <BorderBeam
                     size="md"
                     colorVariant="ice"
-                    theme="dark"
+                    theme={resolvedTheme === "light" ? "light" : "dark"}
                     staticColors
                     borderRadius={999}
                     duration={3.2}
@@ -725,7 +718,7 @@ export default function Dashboard() {
                       className={cn("cine-search", heroFocused && "hero-search--focused")}
                     >
                     <div className="cine-search__inner">
-                    <Search aria-hidden className="ml-3.5 h-5 w-5 shrink-0 text-white/55" />
+                    <Search aria-hidden className="ml-3.5 h-5 w-5 shrink-0 text-[var(--cine-hero-fg-4)]" />
                     <label htmlFor="hero-search" className="sr-only">{t("common.search", "Search")} vehicles</label>
                     <input
                       id="hero-search"
@@ -784,7 +777,7 @@ export default function Dashboard() {
                       aria-activedescendant={heroActiveIdx >= 0 ? `hero-suggestion-${heroActiveIdx}` : undefined}
                       type="search"
                       enterKeyHint="search"
-                      className="h-14 min-w-0 flex-1 bg-transparent text-body font-semibold text-white outline-none placeholder:text-white/45 [&::-webkit-search-cancel-button]:hidden"
+                      className="h-14 min-w-0 flex-1 bg-transparent text-body font-semibold text-[var(--cine-hero-fg)] outline-none placeholder:text-[var(--cine-hero-fg-4)] [&::-webkit-search-cancel-button]:hidden"
                     />
                     <Button type="button" onClick={runHeroSearch} size="md" className="mr-0.5 h-11 px-6 text-footnote">
                       {t("common.search", "Search")}
@@ -850,7 +843,7 @@ export default function Dashboard() {
                 </div>
 
                 {heroSearchMessage && (
-                  <p className="mt-2 text-caption font-medium text-[hsl(213_100%_72%)]">
+                  <p className="mt-2 text-caption font-medium text-[var(--cine-hero-accent)]">
                     {heroSearchMessage}
                   </p>
                 )}
@@ -871,17 +864,17 @@ export default function Dashboard() {
                         {...(motionStill ? {} : press)}
                         className={cn(
                           "tap-44 relative isolate inline-flex min-h-10 items-center rounded-full border px-4 text-footnote font-semibold transition-colors",
-                          active ? "border-transparent text-[hsl(var(--cine-ink))]" : "cine-chip",
+                          active ? "cine-chip border-transparent text-[var(--cine-hero-pill-fg)]" : "cine-chip",
                         )}
                       >
                         {active ? (
                           /* Selected pill slides between chips (layoutId needs motion.*).
-                             White in both themes: the hero stage is dark in light mode too. */
+                             Ink on the light stage, white on the dark one. */
                           <motion.span
                             aria-hidden
                             layoutId="home-category-pill"
                             transition={motionStill ? { duration: 0 } : spring.snappy}
-                            className="absolute inset-0 -z-10 rounded-full bg-white shadow-[0_0_24px_-4px_rgba(255,255,255,0.45)]"
+                            className="absolute inset-0 -z-10 rounded-full bg-[var(--cine-hero-pill-bg)] shadow-[0_0_24px_-4px_var(--cine-hero-pill-glow)]"
                           />
                         ) : null}
                         {t(cat.labelKey, cat.fallback)}
@@ -920,7 +913,7 @@ export default function Dashboard() {
             </div>
             <div className="hidden min-w-0 sm:block">
               <dt className="cine-stat__label text-caption font-medium">{t("shell.home.hud.title", "AI Value")}</dt>
-              <dd className="mt-1.5 text-footnote text-white/80">{t("shell.home.hud.body", "Fair-price range on every ad")}</dd>
+              <dd className="mt-1.5 text-footnote text-[var(--cine-hero-fg-3)]">{t("shell.home.hud.body", "Fair-price range on every ad")}</dd>
             </div>
           </dl>
         </div>

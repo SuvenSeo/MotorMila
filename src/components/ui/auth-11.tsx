@@ -64,7 +64,7 @@ export default function Auth11({ slides, panelTitle, slideLabel, children }: Aut
   }, [reduced, slides.length, active]);
 
   return (
-    <div className="theme-dark relative flex min-h-screen w-full flex-col bg-[#09090B] font-sans text-neutral-200 antialiased selection:bg-[#0A7AFF]/40 selection:text-white lg:flex-row">
+    <div className="relative flex min-h-screen w-full flex-col bg-background font-sans text-foreground antialiased selection:bg-[#0A7AFF]/40 selection:text-white lg:flex-row">
       {/* Image panel — a band on top on mobile, the tall left half on desktop */}
       <div className="relative w-full p-4 pb-0 lg:flex lg:min-h-screen lg:w-1/2 lg:flex-col lg:justify-end lg:pb-4">
         <div className="relative h-[36vh] min-h-[240px] w-full overflow-hidden rounded-[28px] border border-white/10 shadow-2xl lg:h-full lg:min-h-0 lg:flex-1 lg:rounded-[32px]">

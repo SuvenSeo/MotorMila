@@ -448,7 +448,7 @@ export function ResultCard({
         // The one hero result on a page: a dark "night drive" stage in both
         // themes (.theme-dark re-points every token inside it), lit by a
         // single static light pool. No sweep, no sheen.
-        emphasis && "cine-result theme-dark bg-[hsl(var(--cine-ink))] text-foreground shadow-e2",
+        emphasis && "cine-result theme-dark cine-ink-surface text-foreground shadow-e2",
         className,
       )}
     >

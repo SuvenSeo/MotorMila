@@ -371,7 +371,7 @@ export default function Compare() {
     <PageCanvas ambient="none">
       <CineHeader
         eyebrow={
-          <Link to="/" className="inline-flex items-center gap-1 text-white/80 no-underline transition-opacity duration-short hover:opacity-80">
+          <Link to="/" className="inline-flex items-center gap-1 text-current opacity-80 no-underline transition-opacity duration-short hover:opacity-80">
             <ArrowLeft className="h-4 w-4" aria-hidden />
             {t("comparePage.back", "Back to listings")}
           </Link>
@@ -441,7 +441,7 @@ export default function Compare() {
           <section className="cine-panel theme-dark p-5 text-foreground sm:p-8" aria-labelledby="compare-empty-title">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-xl">
-                <p className="cine-eyebrow text-white/60">
+                <p className="cine-eyebrow cine-surface-eyebrow">
                   {t("comparePage.cine.slotsKicker", "{n} of {max} slots filled", { n: listings.length, max: MAX_COMPARE })}
                 </p>
                 <h2 id="compare-empty-title" className="cine-display mt-3 text-[clamp(1.75rem,1.4rem+1.5vw,2.5rem)] text-white">

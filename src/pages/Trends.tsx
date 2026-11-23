@@ -295,9 +295,9 @@ export default function Trends() {
             { label: t("trends.stat.history", "History"), value: t("trends.stat.historyValue", "Monthly"), hint: t("trends.stat.historyHint", "Median price over time") },
           ].map((stat) => (
             <div key={stat.label} className="min-w-0 border-t border-foreground/15 pt-3">
-              <dt className="text-caption text-white/55">{stat.label}</dt>
-              <dd className="mt-1 text-callout font-semibold text-white">{stat.value}</dd>
-              <dd className="mt-0.5 hidden text-caption text-white/55 sm:block">{stat.hint}</dd>
+              <dt className="text-caption text-muted-foreground">{stat.label}</dt>
+              <dd className="mt-1 text-callout font-semibold text-foreground">{stat.value}</dd>
+              <dd className="mt-0.5 hidden text-caption text-muted-foreground sm:block">{stat.hint}</dd>
             </div>
           ))}
         </dl>
@@ -531,17 +531,17 @@ const TrendHeadline = memo(function TrendHeadline({ lane, points, loading }: { l
 
   return (
     <div className="cine-trend-headline max-w-3xl" aria-live="polite">
-      <p className="cine-eyebrow text-white/60">{t("trends.cine.kicker", "Headline movement")}</p>
+      <p className="cine-eyebrow text-muted-foreground">{t("trends.cine.kicker", "Headline movement")}</p>
       <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-6">
         {facts ? (
           <p className="shrink-0">
-            <span className="cine-display block text-[clamp(2rem,1.5rem+2vw,3rem)] leading-none tabular-nums text-white">{formatPriceLkrMillions(facts.median)}</span>
-            <span className="mt-1.5 block text-caption text-white/55">
+            <span className="cine-display block text-[clamp(2rem,1.5rem+2vw,3rem)] leading-none tabular-nums text-foreground">{formatPriceLkrMillions(facts.median)}</span>
+            <span className="mt-1.5 block text-caption text-muted-foreground">
               {t("trends.cine.basis", "Median asking price · {n} ads tracked", { n: facts.ads.toLocaleString("en-US") })}
             </span>
           </p>
         ) : null}
-        <p className="text-body leading-snug text-white/85 sm:pb-1" data-tone={tone}>
+        <p className="text-body leading-snug text-foreground/85 sm:pb-1" data-tone={tone}>
           {facts ? <span aria-hidden className="cine-trend-chip" data-tone={tone}>{tone === "up" ? "▲" : tone === "down" ? "▼" : "■"}</span> : null}
           {sentence}
         </p>

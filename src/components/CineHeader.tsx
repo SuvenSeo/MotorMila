@@ -19,10 +19,10 @@ type CineHeaderProps = {
 };
 
 /**
- * Page header in the "Night drive" language: a dark ink band (both themes,
- * tokens scoped with .theme-dark) with an editorial headline, lit by an
- * optional photo plate or two static light pools. One-shot rise on arrival,
- * nothing that loops.
+ * Page header in the "Showroom" language: an ink band at night and a plaster
+ * one in daylight (surface palette in cinematic-pages.css), with an editorial
+ * headline lit by an optional photo plate or two static light pools. One-shot
+ * rise on arrival, nothing that loops.
  */
 export function CineHeader({ eyebrow, lead, accent, body, image, imagePosition = "70% 50%", children, className, compact = false }: CineHeaderProps) {
   return (
@@ -49,11 +49,11 @@ export function CineHeader({ eyebrow, lead, accent, body, image, imagePosition =
         <div className="cine-grain-static" />
       </div>
       <div className={`relative z-10 mx-auto max-w-[1320px] px-5 sm:px-6 md:pb-14 md:pt-14 ${compact ? "pb-7 pt-5" : "pb-10 pt-10"}`}>
-        <p className="cine-eyebrow cine-rise text-white/70" style={{ "--i": 0 } as CSSProperties}>
+        <p className="cine-eyebrow cine-header__eyebrow cine-rise" style={{ "--i": 0 } as CSSProperties}>
           {eyebrow}
         </p>
         <h1
-          className={`cine-display cine-rise max-w-[18ch] text-white ${compact ? "mt-3 text-[clamp(2rem,1.3rem+3vw,4rem)]" : "mt-4 text-[clamp(2.25rem,1.4rem+3vw,4rem)]"}`}
+          className={`cine-display cine-header__title cine-rise max-w-[18ch] ${compact ? "mt-3 text-[clamp(2rem,1.3rem+3vw,4rem)]" : "mt-4 text-[clamp(2.25rem,1.4rem+3vw,4rem)]"}`}
           style={{ "--i": 1 } as CSSProperties}
         >
           {lead}
@@ -65,7 +65,7 @@ export function CineHeader({ eyebrow, lead, accent, body, image, imagePosition =
           ) : null}
         </h1>
         {body ? (
-          <p className={`cine-rise max-w-xl leading-relaxed text-white/75 ${compact ? "mt-3 line-clamp-3 text-footnote sm:mt-4 sm:line-clamp-none sm:text-body" : "mt-4 text-body"}`} style={{ "--i": 2 } as CSSProperties}>
+          <p className={`cine-header__body cine-rise max-w-xl leading-relaxed ${compact ? "mt-3 line-clamp-3 text-footnote sm:mt-4 sm:line-clamp-none sm:text-body" : "mt-4 text-body"}`} style={{ "--i": 2 } as CSSProperties}>
             {body}
           </p>
         ) : null}

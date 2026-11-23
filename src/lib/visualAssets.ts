@@ -52,6 +52,10 @@ import pageHomeHeroNight from "../../assets/page_home_hero_night.webp";
 import pageHomeHeroNightSm from "../../assets/page_home_hero_night-sm.webp";
 import pageHomeHeroStudio from "../../assets/page_home_hero_studio.webp";
 import pageHomeHeroStudioSm from "../../assets/page_home_hero_studio-sm.webp";
+import pageHomeHeroShowroomDark from "../../assets/page_home_hero_showroom_dark.webp";
+import pageHomeHeroShowroomDarkSm from "../../assets/page_home_hero_showroom_dark-sm.webp";
+import pageHomeHeroShowroomLight from "../../assets/page_home_hero_showroom_light.webp";
+import pageHomeHeroShowroomLightSm from "../../assets/page_home_hero_showroom_light-sm.webp";
 import authShowroom from "../../assets/auth_showroom.webp";
 import authNightCoast from "../../assets/auth_night_coast.webp";
 import authNightCoastSm from "../../assets/auth_night_coast-sm.webp";
@@ -76,6 +80,10 @@ import pageHomeHeroNightAvif from "../../assets/page_home_hero_night.avif";
 import pageHomeHeroNightAvifSm from "../../assets/page_home_hero_night-sm.avif";
 import pageHomeHeroStudioAvif from "../../assets/page_home_hero_studio.avif";
 import pageHomeHeroStudioAvifSm from "../../assets/page_home_hero_studio-sm.avif";
+import pageHomeHeroShowroomDarkAvif from "../../assets/page_home_hero_showroom_dark.avif";
+import pageHomeHeroShowroomDarkAvifSm from "../../assets/page_home_hero_showroom_dark-sm.avif";
+import pageHomeHeroShowroomLightAvif from "../../assets/page_home_hero_showroom_light.avif";
+import pageHomeHeroShowroomLightAvifSm from "../../assets/page_home_hero_showroom_light-sm.avif";
 import authShowroomAvif from "../../assets/auth_showroom.avif";
 import page404NightAvif from "../../assets/page_404_night.avif";
 import page404NightAvifSm from "../../assets/page_404_night-sm.avif";
@@ -119,6 +127,10 @@ export const visuals = {
   pageHomeHeroNight: pair(pageHomeHeroNight, pageHomeHeroNightSm),
   /** Home hero: minimalist dark concrete studio bay with vehicle right-anchored. */
   pageHomeHeroStudio: pair(pageHomeHeroStudio, pageHomeHeroStudioSm),
+  /** Home hero (dark mode): night showroom, city skyline through the glass, car on the right. */
+  pageHomeHeroShowroomDark: pair(pageHomeHeroShowroomDark, pageHomeHeroShowroomDarkSm),
+  /** Home hero (light mode): the same showroom in daylight — bright white walls, car on the right. */
+  pageHomeHeroShowroomLight: pair(pageHomeHeroShowroomLight, pageHomeHeroShowroomLightSm),
   /** Auth visual panel: dark rain showroom, gold strip light (generated, no badges). */
   authShowroom: pair(authShowroom, authShowroomSm),
   /** auth-11 sign-in panel: generated Sri Lanka night-drive triptych (coast, tea country, city rain). */
@@ -149,6 +161,8 @@ export const HERO_AVIF: Record<string, HeroImageMeta> = {
   [pageHomeHeroCoastal]: { avif: pageHomeHeroCoastalAvif, avifSm: pageHomeHeroCoastalAvifSm, width: 1920, height: 823 },
   [pageHomeHeroNight]: { avif: pageHomeHeroNightAvif, avifSm: pageHomeHeroNightAvifSm, width: 1920, height: 815 },
   [pageHomeHeroStudio]: { avif: pageHomeHeroStudioAvif, avifSm: pageHomeHeroStudioAvifSm, width: 1376, height: 768 },
+  [pageHomeHeroShowroomDark]: { avif: pageHomeHeroShowroomDarkAvif, avifSm: pageHomeHeroShowroomDarkAvifSm, width: 1672, height: 941 },
+  [pageHomeHeroShowroomLight]: { avif: pageHomeHeroShowroomLightAvif, avifSm: pageHomeHeroShowroomLightAvifSm, width: 1672, height: 941 },
   [authShowroom]: { avif: authShowroomAvif, avifSm: authShowroomAvifSm, width: 1152, height: 1430 },
   [page404Night]: { avif: page404NightAvif, avifSm: page404NightAvifSm, width: 1920, height: 1072 },
 };

@@ -1,5 +1,6 @@
 import { BRAND } from "@/lib/brand";
 import { AtmosphericImage } from "@/components/AtmosphericImage";
+import { HeroPlate } from "@/components/HeroPlate";
 import {
   HERO_VARIANTS,
   getHeroVariant,
@@ -91,9 +92,9 @@ export default function HeroLab() {
         }`}
       >
         <div aria-hidden className="pointer-events-none absolute inset-0">
-          <AtmosphericImage
-            src={variant.image.src}
-            srcSm={variant.image.srcSm}
+          <HeroPlate
+            key={variant.id}
+            variant={variant}
             className={`h-full w-full object-cover ${variant.imageOpacity}`}
             style={{ objectPosition: variant.objectPosition }}
             priority

@@ -21,6 +21,16 @@
 .lp-stage::after {
   background: hsl(0 0% 100% / 0.06);
 }
+/* Daylight: the stage becomes a plaster band with the same soft blue wash, so
+   the title and gallery belong to the light page instead of a dark slab. */
+html.theme-light .cine-stage.theme-light { background: hsl(var(--background)); color: hsl(var(--foreground)); }
+html.theme-light .cine-stage.theme-light::after { background: hsl(var(--foreground) / 0.08); }
+html.theme-light .lp-stage {
+  background:
+    radial-gradient(120% 80% at 50% -20%, hsl(213 60% 45% / 0.1), transparent 62%),
+    hsl(var(--background));
+}
+html.theme-light .lp-stage::after { background: hsl(var(--foreground) / 0.06); }
 
 .lp-eyebrow {
   display: inline-flex;
@@ -58,6 +68,11 @@
   background: hsl(0 0% 100% / 0.06);
   backdrop-filter: blur(14px);
 }
+html.theme-light .lp-stage-rail {
+  border-color: hsl(var(--foreground) / 0.1);
+  background: hsl(40 40% 99% / 0.66);
+}
+html.theme-light .lp-stage .hover\:bg-white\/10:hover { background: hsl(var(--foreground) / 0.08); }
 
 /* ── Gallery: full-bleed, cover, one solid frame ────────────────────────── */
 

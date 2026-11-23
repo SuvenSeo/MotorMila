@@ -77,8 +77,8 @@ export default function OfficialPulse() {
           <dl className="mb-6 grid max-w-md grid-cols-3 gap-4">
             {headerStats.map((stat) => (
               <div key={stat.label} className="min-w-0 border-t border-foreground/15 pt-3">
-                <dt className="text-caption text-white/55">{stat.label}</dt>
-                <dd className="cine-display mt-1 text-title2 tabular-nums text-white">{stat.value.toLocaleString("en-US")}</dd>
+                <dt className="text-caption text-muted-foreground">{stat.label}</dt>
+                <dd className="cine-display mt-1 text-title2 tabular-nums text-foreground">{stat.value.toLocaleString("en-US")}</dd>
               </div>
             ))}
           </dl>

@@ -9,6 +9,27 @@
 :root {
   --cine-ink: 222 40% 3%;
   --cine-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Cinematic surfaces follow the page theme: ink at night, the page's own
+     plaster and cards in daylight. Scrims that sit over photography keep
+     --cine-ink so white media captions stay readable in both themes. */
+  --cine-surface: var(--cine-ink);
+  --cine-surface-card: var(--cine-ink);
+  --cine-surface-fg: hsl(0 0% 100%);
+  --cine-surface-fg-2: hsl(0 0% 100% / 0.75);
+  --cine-surface-line: hsl(0 0% 100% / 0.08);
+  --cine-surface-line-strong: hsl(0 0% 100% / 0.16);
+  --cine-surface-glow: hsl(213 100% 55% / 0.16);
+  --cine-surface-glow-warm: hsl(32 90% 55% / 0.1);
+}
+html.theme-light {
+  --cine-surface: var(--background);
+  --cine-surface-card: var(--card);
+  --cine-surface-fg: hsl(var(--foreground));
+  --cine-surface-fg-2: hsl(var(--foreground) / 0.72);
+  --cine-surface-line: hsl(var(--foreground) / 0.1);
+  --cine-surface-line-strong: hsl(var(--foreground) / 0.16);
+  --cine-surface-glow: hsl(213 100% 55% / 0.07);
+  --cine-surface-glow-warm: hsl(32 90% 55% / 0.06);
 }
 
 /* ── Shared ──────────────────────────────────────────────────────────────── */
@@ -18,8 +39,8 @@
 .cine-stage {
   position: relative;
   isolation: isolate;
-  background: hsl(var(--cine-ink));
-  color: hsl(0 0% 100%);
+  background: hsl(var(--cine-surface));
+  color: var(--cine-surface-fg);
 }
 /* Aliases resolve where they are declared (:root), so a nested .theme-dark
    has to re-point them or light-mode values leak in (secondary buttons). */
@@ -37,13 +58,19 @@
   --deal-amber: var(--deal-caution);
   --deal-red: var(--deal-high);
 }
+/* An ink surface that follows the theme, for components that painted the
+   stage colour inline (`bg-[hsl(var(--cine-ink))]`). */
+.cine-ink-surface {
+  background: hsl(var(--cine-surface));
+  color: var(--cine-surface-fg);
+}
 .cine-stage::after {
   /* Soft floor where the stage meets the page. */
   content: "";
   position: absolute;
   inset: auto 0 0 0;
   height: 1px;
-  background: hsl(0 0% 100% / 0.08);
+  background: var(--cine-surface-line);
   pointer-events: none;
 }
 
@@ -79,6 +106,7 @@
   color: hsl(var(--primary-bright, 213 100% 66%));
 }
 .cine-stage .cine-display em { color: hsl(213 100% 70%); }
+html.theme-light .cine-stage .cine-display em { color: hsl(var(--primary)); }
 :root:lang(si) .cine-display,
 :root:lang(ta) .cine-display { letter-spacing: 0; line-height: 1.2; }
 
@@ -355,12 +383,12 @@
   background: hsl(var(--card));
 }
 .cine-plan--pro {
-  border-color: hsl(0 0% 100% / 0.12);
+  border-color: var(--cine-surface-line-strong);
   background:
-    radial-gradient(ellipse 80% 60% at 85% 0%, hsl(213 100% 55% / 0.22), transparent 60%),
-    radial-gradient(ellipse 60% 40% at 0% 100%, hsl(32 90% 55% / 0.1), transparent 70%),
-    hsl(var(--cine-ink));
-  color: #fff;
+    radial-gradient(ellipse 80% 60% at 85% 0%, var(--cine-surface-glow), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 0% 100%, var(--cine-surface-glow-warm), transparent 70%),
+    hsl(var(--cine-surface-card));
+  color: var(--cine-surface-fg);
 }
 
 /* Photo plate on the Pro card: one car under one light, fading into ink. */
@@ -522,12 +550,27 @@ html.low-data .cine-step-rail__fill { transition: none !important; }
 }
 @media (min-width: 1024px) {
   .cine-header__img { left: 38%; width: 62%; opacity: 0.9; }
+  html.theme-light .cine-header__scrim {
+    background:
+      linear-gradient(90deg, hsl(var(--background)) 0%, hsl(var(--background)) 34%, hsl(var(--background) / 0.78) 54%, hsl(var(--background) / 0.16) 82%),
+      linear-gradient(180deg, hsl(var(--background) / 0.5) 0%, transparent 38%, hsl(var(--background) / 0.9) 100%);
+  }
   .cine-header__scrim {
     background:
       linear-gradient(90deg, hsl(var(--cine-ink)) 0%, hsl(var(--cine-ink)) 38%, hsl(var(--cine-ink) / 0.55) 56%, hsl(var(--cine-ink) / 0.1) 80%),
       linear-gradient(180deg, transparent 60%, hsl(var(--cine-ink)) 100%);
   }
 }
+/* Copy that sits on a cinematic surface (header band, panel, figure). */
+.cine-header__eyebrow, .cine-surface-eyebrow { color: var(--cine-surface-fg-2); }
+.cine-header__title, .cine-surface-title { color: var(--cine-surface-fg); }
+.cine-header__body, .cine-surface-body { color: var(--cine-surface-fg-2); }
+/* Daylight: the plate is washed toward the page so the ink headline holds. */
+html.theme-light .cine-header__scrim {
+  background: linear-gradient(180deg, hsl(var(--background) / 0.88), hsl(var(--background) / 0.92) 55%, hsl(var(--background)));
+}
+html.theme-light .cine-header__img { opacity: 0.7; }
+html.theme-light .cine-header__pools { opacity: 0.55; }
 .cine-header__pools {
   position: absolute;
   inset: 0;
@@ -547,16 +590,16 @@ html.low-data .cine-step-rail__fill { transition: none !important; }
   border-radius: 999px;
   font-size: 0.625rem;
   vertical-align: 0.15em;
-  background: hsl(0 0% 100% / 0.1);
-  color: hsl(0 0% 100% / 0.8);
+  background: hsl(var(--foreground) / 0.08);
+  color: hsl(var(--muted-foreground));
 }
 .cine-trend-chip[data-tone="up"] { background: hsl(var(--deal-caution) / 0.18); color: hsl(var(--deal-caution)); }
 .cine-trend-chip[data-tone="down"] { background: hsl(var(--deal-good) / 0.18); color: hsl(var(--deal-good)); }
 /* The lane filters sit flush on the page: hairline, no lift. */
 .cine-trend-filters { box-shadow: none; }
 /* Chart card: the plot reads as a clean instrument. */
-.cine-chart .recharts-cartesian-axis-tick-value { fill: hsl(0 0% 100% / 0.5); font-size: 11px; }
-.cine-chart .recharts-tooltip-cursor { stroke: hsl(0 0% 100% / 0.22); stroke-dasharray: 2 4; }
+.cine-chart .recharts-cartesian-axis-tick-value { fill: hsl(var(--muted-foreground)); font-size: 11px; }
+.cine-chart .recharts-tooltip-cursor { stroke: hsl(var(--border)); stroke-dasharray: 2 4; }
 /* One-shot draw-in: a curtain in the card's ink slides off the plot, left to
    right (transform only, composited); its leading edge is feathered. */
 .cine-chart__curtain-wrap {
@@ -587,11 +630,11 @@ html.low-data .cine-chart__curtain-wrap { display: none; }
   isolation: isolate;
   overflow: hidden;
   border-radius: var(--radius-sheet, 1.75rem);
-  border: 1px solid hsl(0 0% 100% / 0.08);
+  border: 1px solid var(--cine-surface-line);
   background:
-    radial-gradient(ellipse 70% 60% at 100% 0%, hsl(213 100% 55% / 0.16), transparent 65%),
-    hsl(var(--cine-ink));
-  color: hsl(0 0% 100%);
+    radial-gradient(ellipse 70% 60% at 100% 0%, var(--cine-surface-glow), transparent 65%),
+    hsl(var(--cine-surface-card));
+  color: var(--cine-surface-fg);
 }
 .cine-panel.theme-dark,
 .cine-topbar.theme-dark {
@@ -678,9 +721,9 @@ html.low-data .cine-radar__dots { animation: none !important; }
 
 /* ── Pro workspace: the sticky bar above its header (both themes) ─────────── */
 .cine-topbar {
-  background: hsl(var(--cine-ink));
-  border-bottom: 1px solid hsl(0 0% 100% / 0.08);
-  color: hsl(0 0% 100%);
+  background: hsl(var(--cine-surface));
+  border-bottom: 1px solid var(--cine-surface-line);
+  color: var(--cine-surface-fg);
 }
 
 /* ── How we price: sticky index, deal-band card, source grid ─────────────── */

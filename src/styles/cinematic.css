@@ -21,7 +21,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.06;
+  opacity: var(--cine-grain-opacity, 0.06);
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 }
@@ -32,7 +32,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: hsl(var(--cine-ink));
+  background: var(--cine-layer, hsl(var(--cine-ink)));
   opacity: 0;
   visibility: hidden;
   animation: cine-expose 1.5s var(--cine-ease) both;
@@ -50,7 +50,7 @@
   right: 0;
   height: 11%;
   pointer-events: none;
-  background: hsl(var(--cine-ink));
+  background: var(--cine-layer, hsl(var(--cine-ink)));
   transform: scaleY(0);
   visibility: hidden;
   animation: cine-letterbox 1.25s var(--cine-ease-in-out) 0.12s both;
@@ -114,14 +114,68 @@
 /* ── Home hero ───────────────────────────────────────────────────────────── */
 
 .cine-hero {
+  /* Hero palette. Dark mode is the ink film stage with white type; light mode
+     flips the stage to the page's warm plaster, the type to warm ink, and the
+     scrim from a dark veil to a light wash, so the hero belongs to the page
+     instead of sitting on it as a dark slab. */
+  --cine-hero-stage: hsl(var(--cine-ink));
+  --cine-hero-fg: #fff;
+  --cine-hero-fg-2: rgba(255, 255, 255, 0.82);
+  --cine-hero-fg-3: rgba(255, 255, 255, 0.78);
+  --cine-hero-fg-4: rgba(255, 255, 255, 0.55);
+  --cine-hero-accent: hsl(213 100% 66%);
+  --cine-hero-accent-glow: rgba(64, 146, 255, 0.55), rgba(150, 200, 255, 0.6);
+  --cine-hero-line: rgba(255, 255, 255, 0.1);
+  --cine-hero-line-strong: rgba(255, 255, 255, 0.16);
+  --cine-hero-chip-bg: rgba(8, 10, 14, 0.55);
+  --cine-hero-chip-hover: rgba(255, 255, 255, 0.1);
+  --cine-hero-chip-fg: rgba(255, 255, 255, 0.9);
+  --cine-hero-search-bg: linear-gradient(180deg, rgba(16, 20, 28, 0.86), rgba(7, 9, 14, 0.9));
+  --cine-hero-search-edge: rgba(255, 255, 255, 0.16);
+  --cine-hero-search-inset: rgba(255, 255, 255, 0.1);
+  --cine-hero-search-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(0, 0, 0, 0.2);
+  --cine-hero-stat-label: rgba(255, 255, 255, 0.6);
+  --cine-hero-stat-value: #fff;
+  --cine-hero-pill-bg: #fff;
+  --cine-hero-pill-fg: hsl(var(--cine-ink));
+  --cine-hero-pill-glow: rgba(255, 255, 255, 0.45);
+  --cine-layer: hsl(var(--cine-ink));
+  --cine-grain-opacity: 0.06;
+
   position: relative;
   isolation: isolate;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: hsl(var(--cine-ink));
-  color: #fff;
+  background: var(--cine-hero-stage);
+  color: var(--cine-hero-fg);
   min-height: min(100svh, 980px);
+}
+
+html.theme-light .cine-hero {
+  --cine-hero-stage: hsl(var(--background));
+  --cine-hero-fg: hsl(var(--foreground));
+  --cine-hero-fg-2: hsl(var(--foreground) / 0.72);
+  --cine-hero-fg-3: hsl(var(--foreground) / 0.7);
+  --cine-hero-fg-4: hsl(var(--foreground) / 0.45);
+  --cine-hero-accent: hsl(var(--primary-bright));
+  --cine-hero-accent-glow: rgba(10, 122, 255, 0.18), rgba(10, 122, 255, 0.1);
+  --cine-hero-line: hsl(var(--foreground) / 0.1);
+  --cine-hero-line-strong: hsl(var(--foreground) / 0.14);
+  --cine-hero-chip-bg: hsl(40 40% 99% / 0.72);
+  --cine-hero-chip-hover: hsl(40 40% 99% / 0.96);
+  --cine-hero-chip-fg: hsl(var(--foreground) / 0.85);
+  --cine-hero-search-bg: linear-gradient(180deg, hsl(40 40% 99% / 0.96), hsl(40 40% 99% / 0.9));
+  --cine-hero-search-edge: hsl(var(--foreground) / 0.12);
+  --cine-hero-search-inset: rgba(255, 255, 255, 0.9);
+  --cine-hero-search-shadow: 0 22px 48px -20px rgba(48, 32, 16, 0.3), 0 0 0 1px hsl(var(--foreground) / 0.06);
+  --cine-hero-stat-label: hsl(var(--muted-foreground));
+  --cine-hero-stat-value: hsl(var(--foreground));
+  --cine-hero-pill-bg: hsl(var(--foreground));
+  --cine-hero-pill-fg: hsl(var(--background));
+  --cine-hero-pill-glow: rgba(24, 16, 9, 0.25);
+  --cine-layer: hsl(var(--background));
+  --cine-grain-opacity: 0;
 }
 .hero-banners:has(> :only-child) ~ .cine-hero { padding-top: calc(var(--nav-offset) + 64px); }
 .hero-banners:has(> :nth-child(2)) ~ .cine-hero { padding-top: calc(var(--nav-offset) + 124px); }
@@ -137,8 +191,26 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: 82% 50%;
+  object-position: var(--cine-pos, 70% 50%);
 }
+
+/* Photo plate: a variant with a light-mode photo stacks both and crossfades the
+   pair off the theme class on <html>, so the theme toggle swaps the image
+   smoothly (CSS transition only — no reload, no React state). */
+.hero-plate__img {
+  position: absolute;
+  inset: 0;
+  /* Symmetric ease: the stage ease-out front-loads too hard for a crossfade,
+     so the swap reads as an instant cut. */
+  transition: opacity 900ms cubic-bezier(0.4, 0, 0.25, 1);
+}
+.hero-plate__img--light { opacity: 0; }
+html.theme-light .hero-plate__img--dark { opacity: 0; }
+html.theme-light .hero-plate__img--light { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .hero-plate__img { transition: none; }
+}
+html.low-data .hero-plate__img { transition: none; }
 /* Light pools that sit on the headlights and the Lotus Tower glow. */
 .cine-hero__bloom {
   position: absolute;
@@ -149,12 +221,21 @@
     radial-gradient(ellipse 30% 26% at 90% 36%, rgba(255, 170, 96, 0.14), transparent 72%);
   mix-blend-mode: screen;
 }
+html.theme-light .cine-hero__bloom { display: none; }
 .cine-hero__scrim {
   position: absolute;
   inset: 0;
   pointer-events: none;
   background:
     linear-gradient(180deg, rgba(4, 6, 10, 0.55) 0%, transparent 22%, transparent 48%, hsl(var(--cine-ink)) 100%);
+}
+/* Light mode keeps the daylight plate clean: a soft plaster pool sits behind
+   the copy column, a light lift covers the header band, and the bottom hands off
+   to the page. Nothing veils the photo itself. */
+html.theme-light .cine-hero__scrim {
+  background:
+    radial-gradient(ellipse 90% 70% at 22% 42%, hsl(var(--background) / 0.9) 0%, hsl(var(--background) / 0.55) 48%, transparent 82%),
+    linear-gradient(180deg, hsl(var(--background) / 0.72) 0%, transparent 24%, transparent 76%, hsl(var(--background)) 100%);
 }
 
 .cine-hero__content {
@@ -173,16 +254,16 @@
   display: inline-flex;
   align-items: center;
   gap: 0.75rem;
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--cine-hero-fg-2);
 }
 .cine-kicker__rule {
   width: 2.25rem;
   height: 1px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.15));
+  background: linear-gradient(90deg, var(--cine-hero-fg-2), var(--cine-hero-line));
 }
 .cine-kicker__no {
   font-family: var(--font-display);
-  color: hsl(213 100% 72%);
+  color: var(--cine-hero-accent);
   letter-spacing: 0.02em;
 }
 
@@ -193,14 +274,14 @@
   line-height: 0.96;
   letter-spacing: -0.035em;
   word-spacing: var(--display-word-spacing);
-  color: #fff;
+  color: var(--cine-hero-fg);
   text-wrap: balance;
 }
 .cine-title__accent {
   display: block;
   font-style: italic;
-  color: hsl(213 100% 66%);
-  text-shadow: 0 0 34px rgba(64, 146, 255, 0.55), 0 0 2px rgba(150, 200, 255, 0.6);
+  color: var(--cine-hero-accent);
+  text-shadow: 0 0 34px var(--cine-hero-accent-glow);
 }
 .cine-accent-in {
   animation: cine-accent 1.3s var(--cine-ease) both;
@@ -218,15 +299,15 @@
 }
 :root:lang(ta) .cine-title { font-size: clamp(1.625rem, 0.6rem + 3.8vw, 3.6rem); }
 
-.cine-body { color: rgba(255, 255, 255, 0.78); }
+.cine-body { color: var(--cine-hero-fg-3); }
 
 /* Search: dark glass with a flat hairline border (no backdrop blur). */
 .cine-search {
   position: relative;
   border-radius: 999px;
   padding: 1px;
-  background: rgba(255, 255, 255, 0.16);
-  box-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(0, 0, 0, 0.2);
+  background: var(--cine-hero-search-edge);
+  box-shadow: var(--cine-hero-search-shadow);
   transition: box-shadow var(--dur-medium) var(--ease-decelerate);
 }
 .cine-search__inner {
@@ -235,24 +316,24 @@
   gap: 0.5rem;
   border-radius: 999px;
   padding: 0.375rem;
-  background: linear-gradient(180deg, rgba(16, 20, 28, 0.86), rgba(7, 9, 14, 0.9));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  background: var(--cine-hero-search-bg);
+  box-shadow: inset 0 1px 0 var(--cine-hero-search-inset);
 }
 .cine-search:focus-within {
-  box-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.85), 0 0 0 4px rgba(10, 122, 255, 0.28), 0 0 48px -6px rgba(10, 122, 255, 0.55);
+  box-shadow: var(--cine-hero-search-shadow), 0 0 0 4px rgba(10, 122, 255, 0.28), 0 0 48px -6px rgba(10, 122, 255, 0.55);
 }
 
 .cine-chip {
-  border-color: rgba(255, 255, 255, 0.16);
-  background: rgba(8, 10, 14, 0.55);
-  color: rgba(255, 255, 255, 0.9);
+  border-color: var(--cine-hero-line-strong);
+  background: var(--cine-hero-chip-bg);
+  color: var(--cine-hero-chip-fg);
 }
-.cine-chip:hover { background: rgba(255, 255, 255, 0.1); }
+.cine-chip:hover { background: var(--cine-hero-chip-hover); }
 
 /* Credits-style stat strip along the bottom of the hero. */
 .cine-strip {
   position: relative;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--cine-hero-line);
 }
 .cine-strip::before {
   content: "";
@@ -261,12 +342,12 @@
   left: 0;
   width: 38%;
   height: 1px;
-  background: linear-gradient(90deg, rgba(110, 170, 255, 0.9), transparent);
+  background: linear-gradient(90deg, var(--cine-hero-accent), transparent);
 }
-.cine-stat__label { color: rgba(255, 255, 255, 0.6); letter-spacing: 0.08em; text-transform: uppercase; }
+.cine-stat__label { color: var(--cine-hero-stat-label); letter-spacing: 0.08em; text-transform: uppercase; }
 :root:lang(si) .cine-stat__label,
 :root:lang(ta) .cine-stat__label { letter-spacing: 0; text-transform: none; }
-.cine-stat__value { color: #fff; }
+.cine-stat__value { color: var(--cine-hero-stat-value); }
 
 @media (min-width: 640px) {
   .cine-hero__content { padding-inline: 1.5rem; }
@@ -281,6 +362,14 @@
     background:
       linear-gradient(90deg, rgba(4, 6, 10, 0.9) 0%, rgba(4, 6, 10, 0.72) 26%, rgba(4, 6, 10, 0.18) 52%, transparent 70%),
       linear-gradient(180deg, rgba(4, 6, 10, 0.6) 0%, transparent 20%, transparent 62%, hsl(var(--cine-ink)) 100%);
+  }
+  /* Daylight plate + warm-ink copy. The copy column gets a plaster pool that
+     fades out well before the car, the header band gets a light lift, and the
+     bottom hands off to the page — the photo between them is untouched. */
+  html.theme-light .cine-hero__scrim {
+    background:
+      radial-gradient(ellipse 46% 74% at 20% 46%, hsl(var(--background) / 0.96) 0%, hsl(var(--background) / 0.84) 42%, hsl(var(--background) / 0.45) 68%, transparent 90%),
+      linear-gradient(180deg, hsl(var(--background) / 0.62) 0%, transparent 18%, transparent 76%, hsl(var(--background) / 0.85) 92%, hsl(var(--background)) 100%);
   }
   .cine-hero__content {
     justify-content: flex-end;
@@ -450,8 +539,8 @@ html.low-data .cine-lift { animation: none !important; }
 .cine-on-dark .brand-wordmark-lockup > img:first-child { display: none !important; }
 .cine-on-dark .brand-wordmark-lockup > img:last-child { display: block !important; }
 
-.cine-hero { border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
-.cine-skel { background: rgba(255, 255, 255, 0.1); }
+.cine-hero { border-bottom: 1px solid var(--cine-hero-line); }
+.cine-skel { background: var(--cine-hero-line-strong); }
 .cine-auth__icon {
   border: 1px solid rgba(255, 255, 255, 0.15);
   background: rgba(255, 255, 255, 0.06);

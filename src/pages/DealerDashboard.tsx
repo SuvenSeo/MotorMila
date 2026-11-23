@@ -821,7 +821,7 @@ export default function DealerDashboard() {
         <CineSection index={n(4)} id={SECTION_IDS.plans} title={t("dealer.plans", "Dealer plans")}>
           <div className="cine-panel theme-dark flex flex-col gap-6 p-6 text-foreground sm:p-8 md:flex-row md:items-end md:justify-between">
             <div className="min-w-0 max-w-2xl">
-              <p className="cine-eyebrow text-white/60">{t("dealer.plans", "Dealer plans")}</p>
+              <p className="cine-eyebrow cine-surface-eyebrow">{t("dealer.plans", "Dealer plans")}</p>
               <h3 className="mt-3 font-display text-title3 font-semibold text-white [text-wrap:balance]">
                 {t("acct.dealer.planTitle", "The full dealer workspace is part of the Dealer plans, from {price}/mo", {
                   price: formatLkr(PLAN_PRICES.dealer_starter.monthly),
