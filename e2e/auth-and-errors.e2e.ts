@@ -5,7 +5,7 @@ test.describe("sign-in", () => {
     await page.goto("/sign-in");
 
     await expect(page).toHaveTitle(/Sign In — Motormila/);
-    await expect(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Welcome back.", exact: true })).toBeVisible();
     const email = page.getByLabel("Email");
     const password = page.getByLabel("Password", { exact: true });
     await expect(email).toBeVisible();
