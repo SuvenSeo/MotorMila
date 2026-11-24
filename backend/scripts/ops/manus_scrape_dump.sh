@@ -70,7 +70,15 @@ fi
 
 for src in "${SOURCES[@]}"; do
   upper="$(printf '%s' "$src" | tr '[:lower:]' '[:upper:]')"
-  echo "== scraping ${src} (max ${MAX} pages, from page ${START_PAGE}) =="
+  env_key="$(printf '%s' "$upper" | tr '-' '_')"
+  override_var="MANUS_MAX_PAGES_${env_key}"
+  src_max="${!override_var:-${MAX}}"
+  if [ "$src" = "auto-lanka" ]; then
+    max_pages_env="SCRAPE_MAX_PAGES_AUTO_LANKA_SITE"
+  else
+    max_pages_env="SCRAPE_MAX_PAGES_${env_key}"
+  fi
+  echo "== scraping ${src} (max ${src_max} pages, from page ${START_PAGE}) =="
   env \
     ALLOW_SQLITE_FALLBACK=true \
     RUN_SCRAPERS=true \
@@ -79,7 +87,7 @@ for src in "${SOURCES[@]}"; do
     RUN_LISTING_LIFECYCLE=false \
     RUN_OUTLIER_DETECTION=false \
     SCRAPE_ENABLED_SOURCES="${src}" \
-    "SCRAPE_MAX_PAGES_${upper}=${MAX}" \
+    "${max_pages_env}=${src_max}" \
     "SCRAPE_START_PAGE=${START_PAGE}" \
     SCRAPE_SOURCE_TIMEOUT_SECONDS="${SOURCE_TIMEOUT}" \
     RIYASEWANA_SCRAPE_MODE=http \

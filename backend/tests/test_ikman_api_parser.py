@@ -153,3 +153,68 @@ def test_ikman_page_budget_keeps_full_depth_for_cars():
 def test_ikman_parses_motorcycle_engine_cc():
     assert IkmanCarScraper._parse_engine_cc("125 cc") == 125
     assert IkmanCarScraper._parse_engine_cc("1,000 cc") == 1000
+
+
+def test_ikman_api_detail_enrichment_runs_concurrently(monkeypatch):
+    import asyncio
+    from app.scrapers import ikman as ikman_module
+
+    active = 0
+    max_active = 0
+    upserted_batches: list[list[dict]] = []
+
+    rows = [
+        {
+            "id": f"ad-{i}",
+            "slug": f"mystery-bike-{i}-for-sale-colombo",
+            "title": f"Mystery Bike {i}",
+            "url": f"https://ikman.lk/en/ad/mystery-bike-{i}-for-sale-colombo",
+            "money": {"amount": "Rs 450,000"},
+            "area": {"name": "Colombo"},
+            "location": {"name": "Colombo"},
+            "details": [],
+            "properties": [],
+        }
+        for i in range(6)
+    ]
+
+    async def fake_fetch_serp(self, client, *, category_id, page_num, next_page_token, max_retries=3):
+        return rows, None, {"total": len(rows)}
+
+    async def fake_fetch_detail(self, client, ad_id: str):
+        nonlocal active, max_active
+        active += 1
+        max_active = max(max_active, active)
+        await asyncio.sleep(0.03)
+        active -= 1
+        return {
+            "properties": [
+                {"key": "brand", "value": "Honda"},
+                {"key": "model", "value": "Dio"},
+                {"key": "model_year", "value": "2019"},
+            ]
+        }
+
+    def fake_upsert_batch(db, source, payloads, *, log_tag="ikman"):
+        upserted_batches.append(list(payloads))
+        return len(payloads)
+
+    monkeypatch.setattr(IkmanCarScraper, "_fetch_serp_page", fake_fetch_serp)
+    monkeypatch.setattr(IkmanCarScraper, "_fetch_api_ad_detail", fake_fetch_detail)
+    monkeypatch.setattr(ikman_module, "upsert_listings_batch", fake_upsert_batch)
+
+    scraper = IkmanCarScraper(db=None)
+    count = asyncio.run(
+        scraper._scrape_category_via_api(
+            client=None,
+            category_id=402,
+            max_pages=1,
+            start_page=1,
+            seen_urls=set(),
+        )
+    )
+
+    assert count == 6
+    assert max_active >= 2, "detail enrichment should run concurrently, not sequentially"
+    assert [item["url"] for item in upserted_batches[0]] == [r["url"] for r in rows]
+

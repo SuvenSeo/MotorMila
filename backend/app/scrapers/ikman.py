@@ -104,6 +104,7 @@ class IkmanCarScraper:
     API_PAGE_DELAY_SECONDS = 0.35
     API_EMPTY_PAGE_LIMIT = 10
     API_PAGE_ERROR_LIMIT = 25
+    API_DETAIL_CONCURRENCY = 6
 
     def __init__(self, db: Session):
         self.db = db
@@ -406,7 +407,7 @@ class IkmanCarScraper:
         if not ad_id:
             return None
         try:
-            response = await client.get(f"{self.API_BASE_URL}/v1/ads/{ad_id}", timeout=30)
+            response = await client.get(f"{self.API_BASE_URL}/v1/ads/{ad_id}", timeout=15)
             response.raise_for_status()
             payload = response.json()
             ad = payload.get("ad") if isinstance(payload, dict) else None
@@ -550,50 +551,79 @@ class IkmanCarScraper:
             consecutive_page_errors = 0
             new_on_page = 0
             page_payloads: list[dict] = []
+            category_slug = self.CATEGORY_SLUGS.get(int(category_id), "cars")
+            resolved_payloads: list[dict | None] = [None] * len(rows)
+            needs_detail: list[tuple[int, dict, str]] = []
 
-            for row in rows:
+            for idx, row in enumerate(rows):
                 try:
-                    category_slug = self.CATEGORY_SLUGS.get(int(category_id), "cars")
                     payload = self._build_payload_from_api_ad(
                         row, vehicle_category=category_slug
                     )
-                    if payload is None:
-                        # Title parse miss: enrich once from detail properties.
-                        detail = await self._fetch_api_ad_detail(client, str(row.get("id") or ""))
-                        if detail:
-                            merged = dict(row)
-                            merged.update(
-                                {
-                                    "title": detail.get("title") or row.get("title"),
-                                    "url": detail.get("url") or row.get("url"),
-                                    "slug": detail.get("slug") or row.get("slug"),
-                                    "money": detail.get("money") or row.get("money"),
-                                    "properties": detail.get("properties") or row.get("properties"),
-                                    "details": detail.get("details") or row.get("details"),
-                                    "images": detail.get("images") or row.get("images"),
-                                    "area": detail.get("area") or row.get("area"),
-                                    "location": detail.get("location") or row.get("location"),
-                                }
-                            )
-                            payload = self._build_payload_from_api_ad(
-                                merged, vehicle_category=category_slug
-                            )
-
-                    if not payload:
-                        continue
-
-                    listing_url = str(payload.get("url") or "")
-                    if not listing_url or listing_url in seen_urls:
-                        continue
-                    seen_urls.add(listing_url)
-                    new_on_page += 1
-                    page_payloads.append(payload)
+                    if payload is not None:
+                        resolved_payloads[idx] = payload
+                    else:
+                        ad_id = str(row.get("id") or "").strip()
+                        if ad_id:
+                            needs_detail.append((idx, row, ad_id))
                 except Exception as exc:
                     log.error(
                         "ikman_api_item_error",
                         category_id=category_id,
                         error=str(exc),
                     )
+
+            if needs_detail:
+                sem = asyncio.Semaphore(max(1, int(self.API_DETAIL_CONCURRENCY)))
+
+                async def _enrich_row(row_item: dict, ad_id: str) -> dict | None:
+                    async with sem:
+                        detail = await self._fetch_api_ad_detail(client, ad_id)
+                    if not detail:
+                        return None
+                    merged = dict(row_item)
+                    merged.update(
+                        {
+                            "title": detail.get("title") or row_item.get("title"),
+                            "url": detail.get("url") or row_item.get("url"),
+                            "slug": detail.get("slug") or row_item.get("slug"),
+                            "money": detail.get("money") or row_item.get("money"),
+                            "properties": detail.get("properties") or row_item.get("properties"),
+                            "details": detail.get("details") or row_item.get("details"),
+                            "images": detail.get("images") or row_item.get("images"),
+                            "area": detail.get("area") or row_item.get("area"),
+                            "location": detail.get("location") or row_item.get("location"),
+                        }
+                    )
+                    return self._build_payload_from_api_ad(
+                        merged, vehicle_category=category_slug
+                    )
+
+                enriched = await asyncio.gather(
+                    *(_enrich_row(row_item, ad_id) for _, row_item, ad_id in needs_detail),
+                    return_exceptions=True,
+                )
+                for (idx, _, _), outcome in zip(needs_detail, enriched):
+                    if isinstance(outcome, BaseException):
+                        if not isinstance(outcome, Exception):
+                            raise outcome
+                        log.error(
+                            "ikman_api_item_error",
+                            category_id=category_id,
+                            error=str(outcome),
+                        )
+                        continue
+                    resolved_payloads[idx] = outcome
+
+            for payload in resolved_payloads:
+                if not payload:
+                    continue
+                listing_url = str(payload.get("url") or "")
+                if not listing_url or listing_url in seen_urls:
+                    continue
+                seen_urls.add(listing_url)
+                new_on_page += 1
+                page_payloads.append(payload)
 
             if page_payloads:
                 inserted = upsert_listings_batch(

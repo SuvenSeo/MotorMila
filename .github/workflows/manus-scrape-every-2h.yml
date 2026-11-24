@@ -26,6 +26,15 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       MANUS_MAX_PAGES: "30"
+      # Incremental 3x-daily cadence: keep 30 pages on primary cars while
+      # rationing secondary categories so multi-category sources (ikman,
+      # riyahub) reach every vehicle leaf inside the 600s budget instead of
+      # timing out on category 2-3. Deep backfills remain uncapped.
+      SCRAPE_SECONDARY_PAGE_DIVISOR: "3"
+      SCRAPE_SECONDARY_PAGE_CAP: "8"
+      # Detail-heavy / slow-origin sources tuned to complete cleanly in 600s.
+      MANUS_MAX_PAGES_RIYAHUB: "10"
+      MANUS_MAX_PAGES_SALEME: "4"
       # Each source is bounded so a blocked marketplace cannot prevent later
       # sources or the dump upload from running. The hard `timeout` kill wraps
       # this with MANUS_SOURCE_KILL_GRACE_SECONDS of headroom so run_sync can
@@ -46,9 +55,9 @@ jobs:
 
       - name: Scrape sources and upload dump
         # riyasewana is deliberately NOT here — it lives in walled-sources
-        # below so each attempt draws a fresh runner IP. saleme/patpat stay
-        # because they now fail fast in ~0.2s instead of burning the budget;
-        # they resume for free the moment a residential proxy is configured.
+        # below so each attempt draws a fresh runner IP. patpat is omitted
+        # because it 405-walls datacenter IPs without a residential proxy;
+        # saleme stays with a tight page budget (MANUS_MAX_PAGES_SALEME=4).
         run: |
           bash backend/scripts/ops/manus_scrape_dump.sh \
             ikman autolanka auto-lanka hitad autostream saleme riyahub carshop dimo autodirect cartivate
@@ -115,6 +124,10 @@ jobs:
           cache-dependency-path: backend/requirements.txt
 
       - name: Scrape walled sources and upload dump
+        id: scrape
+        # A single Cloudflare-blocked leg is expected noise, not a workflow
+        # outage; walled-sources-gate below fails only if ALL legs fail.
+        continue-on-error: true
         # Optional residential proxy. Set SCRAPE_PROXY_URL in repo secrets and
         # this becomes deterministic instead of a coin flip per IP draw.
         env:
@@ -125,6 +138,69 @@ jobs:
       - name: Record blocked attempt
         # A blocked run aborts the script before it uploads, so the release is
         # simply absent. Surfacing it here keeps the retries visible in the UI.
-        if: failure()
+        if: steps.scrape.outcome == 'failure'
         run: |
           echo "::warning::riyasewana attempt ${{ matrix.attempt }} was blocked or failed; another leg may still land."
+
+      - name: Record attempt outcome
+        if: always()
+        run: |
+          mkdir -p walled-outcomes
+          if [ "${{ steps.scrape.outcome }}" = "success" ]; then
+            echo "ok" > "walled-outcomes/attempt-${{ matrix.attempt }}.txt"
+          else
+            echo "blocked" > "walled-outcomes/attempt-${{ matrix.attempt }}.txt"
+          fi
+
+      - name: Upload attempt outcome
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: walled-outcome-${{ matrix.attempt }}
+          path: walled-outcomes/attempt-${{ matrix.attempt }}.txt
+          retention-days: 1
+
+  walled-sources-gate:
+    name: Walled Sources Gate (require ≥1 leg)
+    runs-on: ubuntu-latest
+    needs: walled-sources
+    if: ${{ always() && !cancelled() }}
+    timeout-minutes: 5
+    steps:
+      - name: Download attempt outcomes
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: walled-outcome-*
+          path: walled-outcomes
+          merge-multiple: true
+
+      - name: Verify at least one leg landed
+        run: |
+          set -euo pipefail
+          total=0
+          ok=0
+          for f in walled-outcomes/attempt-*.txt; do
+            [ -f "$f" ] || continue
+            total=$((total + 1))
+            if [ "$(tr -d '[:space:]' < "$f")" = "ok" ]; then
+              ok=$((ok + 1))
+            fi
+          done
+          echo "riyasewana runner IP legs succeeded: ${ok}/${total}"
+          if [ "$ok" -lt 1 ]; then
+            echo "::error::All riyasewana runner IP legs were blocked or failed (${ok}/${total})."
+            exit 1
+          fi
+
+      - name: Notify Slack if all legs failed
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "::warning::SLACK_WEBHOOK_URL unset — riyasewana outage not alerted"
+            exit 0
+          fi
+          curl -fsS -X POST -H 'Content-type: application/json' \
+            --data "{\"text\":\"❌ Motormila riyasewana scrape failed on all runner IP legs (run ${GITHUB_RUN_ID}).\"}" \
+            "$SLACK_WEBHOOK_URL"

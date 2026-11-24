@@ -489,3 +489,31 @@ def test_persistent_detail_timeouts_abort_source_early(monkeypatch):
 
     # 1 listing page + 1 batch of DETAIL_CONCURRENCY (4) detail calls, not all 12 items * 5 pages.
     assert len(client.requested) == 5
+
+
+def test_walled_sources_partial_blocks_do_not_fail_workflow_when_one_leg_lands():
+    """Expected Cloudflare blocks on 1-2 matrix legs should warn, not turn the run red."""
+    wf = _workflow("manus-scrape-every-2h.yml")
+    walled = wf["jobs"]["walled-sources"]
+    scrape_step = next(
+        step for step in walled["steps"] if step.get("name") == "Scrape walled sources and upload dump"
+    )
+    assert scrape_step.get("continue-on-error") is True
+    assert scrape_step.get("id") == "scrape"
+
+    gate = wf["jobs"]["walled-sources-gate"]
+    assert gate["needs"] == "walled-sources"
+    assert "walled-outcome-" in str(gate["steps"])
+
+
+def test_manus_dump_script_honours_per_source_page_overrides_and_auto_lanka_env():
+    script = DUMP_SCRIPT.read_text(encoding="utf-8")
+    assert 'override_var="MANUS_MAX_PAGES_${env_key}"' in script
+    assert 'SCRAPE_MAX_PAGES_AUTO_LANKA_SITE' in script
+
+    wf = _workflow("manus-scrape-every-2h.yml")
+    main_env = wf["jobs"]["scrape-and-dump"]["env"]
+    assert "SCRAPE_SECONDARY_PAGE_DIVISOR" in main_env
+    assert "MANUS_MAX_PAGES_SALEME" in main_env
+    assert "MANUS_MAX_PAGES_RIYAHUB" in main_env
+

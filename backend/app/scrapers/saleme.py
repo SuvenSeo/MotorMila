@@ -23,6 +23,8 @@ class SaleMeScraper(GenericDetailScraper):
         "https://www.saleme.lk/ads/sri-lanka/vans,-buses-&-lorries",
     )
     ALLOW_UNAVAILABLE_PRICE = True
+    DETAIL_CONCURRENCY = 6
+    DETAIL_TIMEOUT_SECONDS = 12
     _cleaner = CarCleaner()
 
     def _build_page_url_groups(

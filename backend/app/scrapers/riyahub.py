@@ -13,6 +13,7 @@ class RiyahubScraper(GenericDetailScraper):
     SOURCE = "riyahub"
     BASE_URL = "https://riyahub.lk"
     ALLOW_UNAVAILABLE_PRICE = True
+    DETAIL_CONCURRENCY = 6
     PRIMARY_CATEGORY = "cars"
     START_URLS = (
         "https://riyahub.lk/vehicle/cars",
